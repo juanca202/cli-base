@@ -20,6 +20,7 @@
     "lint": "eslint .",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
+    "test:e2e": "vitest run --config vitest.e2e.config.ts",
     "test:arch": "node scripts/arch/verify.mjs"
   },
   "packageManager": "npm@11.13.0",
@@ -33,6 +34,7 @@
     "@vitest/coverage-v8": "^5.0.0",
     "dependency-cruiser": "^18.2.0",
     "eslint": "^10.10.0",
+    "execa": "^10.0.1",
     "tsx": "^4.23.13",
     "typescript": "5.9",
     "typescript-eslint": "^8.70.0",
