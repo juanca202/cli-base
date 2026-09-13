@@ -1,9 +1,14 @@
-import { describe, expect, it } from 'vitest';
+import { spawn } from 'node:child_process';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ProcessError } from '../errors.js';
 import { ProcessRunner } from './process-runner.js';
 
 describe('ProcessRunner', () => {
   const runner = new ProcessRunner();
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
 
   it('run captura stdout cuando el hijo termina 0', async () => {
     const result = await runner.run(process.execPath, ['-e', "process.stdout.write('ok')"]);
@@ -31,6 +36,41 @@ describe('ProcessRunner', () => {
     });
     controller.abort();
     await expect(pending).rejects.toBeInstanceOf(ProcessError);
+  });
+
+  it('run rechaza con ProcessError si el comando no existe', async () => {
+    await expect(runner.run('este-comando-no-existe-xyz')).rejects.toBeInstanceOf(ProcessError);
+  });
+
+  it('cancel no hace nada si el hijo ya terminó', async () => {
+    const child = spawn(process.execPath, ['-e', 'process.exit(0)']);
+    await new Promise((resolve) => child.once('exit', resolve));
+
+    const killSpy = vi.spyOn(child, 'kill');
+    runner.cancel(child);
+
+    expect(killSpy).not.toHaveBeenCalled();
+  });
+
+  it('escalate manda SIGKILL si el hijo ignora SIGTERM tras el tiempo de gracia', async () => {
+    const child = spawn(process.execPath, [
+      '-e',
+      "process.on('SIGTERM', () => {}); setInterval(() => {}, 1000);",
+    ]);
+    // Espera a que el hijo instale su propio handler de SIGTERM antes de cancelarlo.
+    await new Promise((resolve) => setTimeout(resolve, 200));
+
+    const exited = new Promise<string | null>((resolve) => {
+      child.once('exit', (_code, signal) => resolve(signal));
+    });
+
+    vi.useFakeTimers();
+    runner.cancel(child);
+    await vi.advanceTimersByTimeAsync(2_000);
+    vi.useRealTimers();
+
+    const signal = await exited;
+    expect(signal).toBe('SIGKILL');
   });
 });
 
