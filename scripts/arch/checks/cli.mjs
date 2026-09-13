@@ -182,4 +182,87 @@ check('CR-006', 'bloqueante', 'mapeo tipo de error → código de salida declara
   }
 });
 
+// --- CR-007 (bloqueante) -----------------------------------------------------
+// Existe un mecanismo compartido de --dry-run (opción + reporte) con
+// semántica consistente, reutilizable por cualquier comando.
+// Audita que src/dry-run.ts exporte la API esperada; no ejecuta la CLI.
+check('CR-007', 'bloqueante', 'mecanismo compartido de --dry-run (opción + reporte) disponible', () => {
+  const file = join(srcRoot, 'dry-run.ts');
+  if (!existsSync(file)) {
+    throw new Error('falta src/dry-run.ts');
+  }
+  const src = readFileSync(file, 'utf8');
+  const missing = ['registerDryRunOption', 'isDryRun', 'reportDryRun'].filter(
+    (name) => !new RegExp(`export function ${name}\\b`).test(src),
+  );
+  if (missing.length > 0) {
+    throw new Error(`src/dry-run.ts no exporta: ${missing.join(', ')}`);
+  }
+});
+
+// --- CR-008 (bloqueante) -----------------------------------------------------
+// Todo comando con efectos secundarios DEBE usar el mecanismo compartido de
+// --dry-run, o quedar listado con su justificación en el registro de
+// excepciones documentadas (src/commands/dry-run-exemptions.ts).
+// Heurística: por cada archivo de src/commands/, exige uso de
+// registerDryRunOption() o una entrada con justificación no vacía en el
+// registro de excepciones. No ejecuta la CLI ni juzga si el comando "debería"
+// tener efectos secundarios: eso lo decide el propio registro de excepciones.
+function listCommandFiles() {
+  const dir = join(srcRoot, 'commands');
+  if (!existsSync(dir)) {
+    return [];
+  }
+  return readdirSync(dir, { withFileTypes: true })
+    .filter(
+      (entry) =>
+        entry.isFile() &&
+        entry.name.endsWith('.ts') &&
+        !entry.name.endsWith('.test.ts') &&
+        entry.name !== 'dry-run-exemptions.ts',
+    )
+    .map((entry) => ({ name: entry.name.replace(/\.ts$/, ''), file: join(dir, entry.name) }));
+}
+
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+// Acota la búsqueda al cuerpo del objeto DRY_RUN_EXEMPTIONS (no al archivo
+// completo): un comentario o texto suelto fuera de ese literal no debe poder
+// simular una entrada de excepción real.
+function extractExemptionsObjectSrc(fileSrc) {
+  const match = fileSrc.match(/DRY_RUN_EXEMPTIONS[^=]*=\s*\{([\s\S]*?)\}/);
+  return match ? match[1] : '';
+}
+
+check('CR-008', 'bloqueante', 'comandos con efectos secundarios usan --dry-run o están exentos con justificación', () => {
+  const commands = listCommandFiles();
+  if (commands.length === 0) {
+    return;
+  }
+  const exemptionsFile = join(srcRoot, 'commands', 'dry-run-exemptions.ts');
+  const exemptionsSrc = existsSync(exemptionsFile) ? readFileSync(exemptionsFile, 'utf8') : '';
+  const exemptionsObjectSrc = extractExemptionsObjectSrc(exemptionsSrc);
+  const usesHelper = /registerDryRunOption\s*\(/;
+  const missing = [];
+  for (const { name, file } of commands) {
+    const source = readFileSync(file, 'utf8');
+    if (usesHelper.test(source)) {
+      continue;
+    }
+    const escapedName = escapeRegExp(name);
+    const exemptionRe = new RegExp(`['"\`]?${escapedName}['"\`]?\\s*:\\s*['"\`][^'"\`]+['"\`]`);
+    if (exemptionRe.test(exemptionsObjectSrc)) {
+      continue;
+    }
+    missing.push(name);
+  }
+  if (missing.length > 0) {
+    throw new Error(
+      `comandos sin --dry-run ni excepción documentada en src/commands/dry-run-exemptions.ts: ${missing.join(', ')}`,
+    );
+  }
+});
+
 process.exit(blockingFailures > 0 ? 1 : 0);
