@@ -28,6 +28,6 @@ Ninguna.
 
 ## Referencias
 
-- ADR de origen: [ADR-003](../adr/ADR-003-eslint-typescript-eslint.md)
+- ADR de origen: [ADR-003](../adr/ADR-003-linter-eslint.md)
 - [ESLint](https://eslint.org/)
 - [typescript-eslint](https://typescript-eslint.io/)
