@@ -55,10 +55,13 @@ describe('ProcessRunner', () => {
   it('escalate manda SIGKILL si el hijo ignora SIGTERM tras el tiempo de gracia', async () => {
     const child = spawn(process.execPath, [
       '-e',
-      "process.on('SIGTERM', () => {}); setInterval(() => {}, 1000);",
+      "process.on('SIGTERM', () => {}); process.stdout.write('ready\\n'); setInterval(() => {}, 1000);",
     ]);
-    // Espera a que el hijo instale su propio handler de SIGTERM antes de cancelarlo.
-    await new Promise((resolve) => setTimeout(resolve, 200));
+    // Espera a que el hijo confirme (por stdout) que instaló su propio handler
+    // de SIGTERM antes de cancelarlo, en vez de un sleep fijo.
+    await new Promise<void>((resolve) => {
+      child.stdout?.once('data', () => resolve());
+    });
 
     const exited = new Promise<string | null>((resolve) => {
       child.once('exit', (_code, signal) => resolve(signal));

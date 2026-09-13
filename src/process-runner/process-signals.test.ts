@@ -24,7 +24,9 @@ describe('process signals', () => {
   });
 
   it('abortRunningProcesses es idempotente si ya está abortada', () => {
+    abortRunningProcesses();
     expect(processAbortSignal().aborted).toBe(true);
+
     expect(() => abortRunningProcesses()).not.toThrow();
     expect(processAbortSignal().aborted).toBe(true);
   });
