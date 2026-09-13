@@ -1,0 +1,41 @@
+{
+  "name": "cli-base",
+  "version": "0.0.0",
+  "description": "Plantilla CLI reutilizable",
+  "type": "module",
+  "bin": {
+    "cli-base": "./dist/cli.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "dev": "tsx src/cli.ts",
+    "build": "tsc && node --input-type=module -e \"import { chmodSync } from 'node:fs'; chmodSync('dist/cli.js', 0o755);\"",
+    "start": "node dist/cli.js",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "test:arch": "node scripts/arch/verify.mjs"
+  },
+  "packageManager": "npm@11.13.0",
+  "private": true,
+  "dependencies": {
+    "commander": "^15.0.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^26.5.1",
+    "@vitest/coverage-v8": "^5.0.0",
+    "dependency-cruiser": "^18.2.0",
+    "eslint": "^10.10.0",
+    "tsx": "^4.23.13",
+    "typescript": "5.9",
+    "typescript-eslint": "^8.70.0",
+    "vitest": "^5.0.0"
+  }
+}

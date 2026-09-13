@@ -1,0 +1,5 @@
+node_modules/
+dist/
+coverage/
+.sdd-devkit/.env
+.sdd-devkit/test-run.json
