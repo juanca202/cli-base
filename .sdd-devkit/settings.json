@@ -1,0 +1,46 @@
+{
+  "language": "es",
+  "specification": {
+    "basePath": "docs/specs/",
+    "archivePath": "docs/archive/",
+    "testCases": {
+      "mode": "ask",
+      "askDetails": true
+    }
+  },
+  "implementation": {
+    "confirmByUnit": "always",
+    "uncommittedChanges": "ask",
+    "workTree": "ask",
+    "maxParallel": 3,
+    "archiveMode": "ask",
+    "handoff": "ask"
+  },
+  "verification": {
+    "qualityCheck": {
+      "enabled": true,
+      "confirmFix": "always"
+    },
+    "codeReview": {
+      "enabled": true,
+      "confirmFix": "always"
+    },
+    "requirementCoverage": {
+      "enabled": true,
+      "confirmFix": "always"
+    },
+    "handoff": "ask"
+  },
+  "escalation": {
+    "maxAttempts": 3,
+    "onLimit": "ask"
+  },
+  "git": {
+    "commitConfirmation": "always",
+    "push": "never",
+    "integrationBranches": []
+  },
+  "projectManagement": {
+    "enabled": false
+  }
+}
