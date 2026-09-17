@@ -1,9 +1,10 @@
 # Fuentes de contexto
 
-- @.agents/MEMORY.md — Preferencias del proyecto
-- @docs/adr/README.md — Índice de decisiones arquitectónicas <!-- omitir esta línea y la siguiente si este repositorio está clasificado "Solo specs" (siempre el caso del repositorio de especificaciones en modo multi-repo) — nunca recibe estos índices -->
-- @docs/standards/README.md — Índice de estándares de arquitectura
-- @README.md — Acerca del proyecto
+- @../.agents/MEMORY.md — Preferencias de la solución (repositorio de especificaciones)
+- @docs/adr/README.md — Índice de decisiones arquitectónicas de este repositorio
+- @docs/standards/README.md — Índice de estándares de arquitectura de este repositorio
+- @README.md — Acerca de este repositorio
+- @../README.md — Acerca de la solución completa (repositorio de especificaciones)
 
 # Reglas generales
 

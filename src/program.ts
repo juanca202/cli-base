@@ -6,8 +6,8 @@ export function createProgram(): Command {
   const program = new Command();
 
   program
-    .name('cli-base')
-    .description('Plantilla CLI reutilizable')
+    .name('cli')
+    .description('Consultas deterministas para el ciclo de desarrollo de sdd-platform')
     .version('0.0.0')
     .exitOverride()
     .option('--output <format>', 'formato de salida: human o json', 'human')

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { runCli } from '../helpers/cli-runner.js';
 
-describe('cli-base (E2E)', () => {
+describe('cli (E2E)', () => {
   it('hello <nombre> saluda por stdout y sale con código 0', async () => {
     const result = await runCli(['hello', 'Ada']);
 

@@ -1,10 +1,10 @@
 {
-  "name": "cli-base",
+  "name": "cli",
   "version": "0.0.0",
-  "description": "Plantilla CLI reutilizable",
+  "description": "Consultas deterministas para facilitar actividades comunes del ciclo de desarrollo de sdd-platform",
   "type": "module",
   "bin": {
-    "cli-base": "./dist/cli.js"
+    "cli": "./dist/cli.js"
   },
   "files": [
     "dist"

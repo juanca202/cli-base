@@ -1,5 +1,8 @@
-# cli-base
+# cli
 
-Plantilla reutilizable para crear herramientas de línea de comandos. Sirve como starter o *base* —sin lógica de un producto concreto— para que un equipo arranque un CLI nuevo con la misma estructura, comandos de ejemplo y convenciones.
+CLI en Node.js con consultas deterministas para facilitar actividades comunes del ciclo de desarrollo de
+`sdd-platform` (por ejemplo, estado de puertas de calidad y otras verificaciones repetibles entre los
+repositorios de la plataforma), evitando reimplementar esa lógica en cada flujo.
 
-El objetivo es copiar o clonar este repositorio y sustituir el comando de muestra por los de cada herramienta, en lugar de volver a decidir layout, empaquetado y arranque en cada proyecto.
+Generado a partir de la plantilla `cli-base` (conservada como remote `upstream`), que aporta la
+estructura, convenciones y estándares de arquitectura ya documentados en `docs/adr/` y `docs/standards/`.
