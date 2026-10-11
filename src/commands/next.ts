@@ -31,8 +31,14 @@ export function registerNextCommand(program: Command): void {
       if (capability !== undefined) query.capability = capability;
 
       const result = await nextId(locate, base, query);
-      // La política de casos de prueba solo aplica a los tipos que los definen: `US` y `WI`.
-      const testCases = TEST_CASE_TYPES.includes(type.toUpperCase()) ? environment.testCases : null;
-      writePayload({ ...result, ...environment, testCases }, resolveOutputFormat(globals.output));
+      // La política de casos de prueba solo aplica a los tipos que los definen (`US` y `WI`):
+      // en los demás el campo se omite.
+      const { testCases, ...context } = environment;
+      const payload = {
+        ...result,
+        ...context,
+        ...(TEST_CASE_TYPES.includes(type.toUpperCase()) ? { testCases } : {}),
+      };
+      writePayload(payload, resolveOutputFormat(globals.output));
     });
 }
