@@ -28,33 +28,26 @@ afterEach(() => {
 const list = (...args: string[]) => runQueryCommand(registerListCommand, ['list', ...args, '--repo', fx.root]);
 
 describe('list', () => {
-  it('modo humano: tabla y línea de resumen', async () => {
+  it('por defecto emite cli-list/v1 en TOON con tabla de items y la ventana', async () => {
     const run = await list('--state', 'active');
 
     expect(run.exitCode).toBe(0);
-    expect(run.stdout).toBe(
-      [
-        'ID       TIPO  ESTADO  RUTA',
-        'SRS-001  SRS   ACTIVE  docs/specs/changes/requirements/SRS-001-plataforma',
-        'US-001   US    ACTIVE  docs/specs/changes/user-stories/US-001-alta',
-        'US-010   US    ACTIVE  docs/specs/changes/user-stories/US-010-cli',
-        '',
-        '3 de 3 artefactos (tipo SRS, US · estado active)',
-        '',
-      ].join('\n'),
-    );
+    expect(run.stdout.split('\n').slice(0, 5)).toEqual([
+      'schema: cli-list/v1',
+      'command: list',
+      'ok: true',
+      'data:',
+      '  items[3]{id,type,slug,kind,state,path,documentPath,parent}:',
+    ]);
+    expect(run.stdout).toContain('  total: 3\n  returned: 3\n  offset: 0\n  limit: null');
   });
 
-  it('--with-status añade STATUS con la marca verbatim y - si no hay', async () => {
+  it('--with-status añade status con la marca verbatim y null si no hay', async () => {
     const run = await list('WF', '--parent', 'US-021', '--with-status');
 
-    expect(run.stdout.trimEnd().split('\n')).toEqual([
-      'ID      TIPO  ESTADO    STATUS    RUTA',
-      'WF-001  WF    ARCHIVED  Proposed  docs/specs/archived/user-stories/US-021-menu/wireframes/WF-001-menu.md',
-      'WF-002  WF    ARCHIVED  -         docs/specs/archived/user-stories/US-021-menu/wireframes/WF-002-etiqueta.md',
-      '',
-      '2 de 2 artefactos (tipo WF · padre US-021 · estado all)',
-    ]);
+    expect(run.stdout).toContain('  items[2]:');
+    expect(run.stdout).toContain('      status: Proposed\n');
+    expect(run.stdout).toContain('      status: null\n');
   });
 
   it('JSON: cli-list/v1 con la ventana --limit/--offset', async () => {

@@ -25,27 +25,34 @@ afterEach(() => {
 const find = (...args: string[]) => runQueryCommand(registerFindCommand, ['find', ...args, '--repo', fx.root]);
 
 describe('find', () => {
-  it('modo humano: tabla ID TIPO ESTADO RUTA', async () => {
+  it('por defecto emite el envolvente cli-find/v1 en TOON con una tabla de coincidencias', async () => {
     const run = await find('US-010');
 
     expect(run.exitCode).toBe(0);
-    expect(run.stdout).toBe(
-      [
-        'ID      TIPO  ESTADO  RUTA',
-        'US-010  US    ACTIVE  docs/specs/changes/user-stories/US-010-cli',
-        '',
-      ].join('\n'),
+    expect(run.stdout.split('\n').slice(0, 5)).toEqual([
+      'schema: cli-find/v1',
+      'command: find',
+      'ok: true',
+      'data:',
+      '  matches[1]{id,type,slug,kind,state,path,documentPath,parent}:',
+    ]);
+    expect(run.stdout).toContain(
+      '    US-010,US,cli,directory,ACTIVE,docs/specs/changes/user-stories/US-010-cli,docs/specs/changes/user-stories/US-010-cli/README.md,null',
     );
+    expect(run.stdout).toContain('  total: 1');
   });
 
   it('un wireframe sin --parent devuelve todas sus coincidencias', async () => {
     const run = await find('WF-001');
 
-    expect(run.stdout.trimEnd().split('\n')).toEqual([
-      'ID      TIPO  ESTADO    RUTA',
-      'WF-001  WF    ARCHIVED  docs/specs/archived/user-stories/US-021-menu/wireframes/WF-001-menu.md',
-      'WF-001  WF    ARCHIVED  docs/specs/archived/work-items/WI-029-caja/wireframes/WF-001-caja.md',
+    const body = JSON.parse((await find('WF-001', '--output', 'json')).stdout);
+    expect(body.data.matches.map((ref: { path: string }) => ref.path)).toEqual([
+      'docs/specs/archived/user-stories/US-021-menu/wireframes/WF-001-menu.md',
+      'docs/specs/archived/work-items/WI-029-caja/wireframes/WF-001-caja.md',
     ]);
+    // `parent` es un objeto: las coincidencias de un WF van como lista, no como tabla.
+    expect(run.stdout).toContain('  matches[2]:');
+    expect(run.stdout).toContain('        id: US-021');
   });
 
   it('--parent deja solo la coincidencia del padre', async () => {
@@ -54,11 +61,13 @@ describe('find', () => {
     expect(JSON.parse(run.stdout).data.total).toBe(1);
   });
 
-  it('sin coincidencias imprime una única línea y sale con 0', async () => {
+  it('sin coincidencias es matches vacío en TOON y sale con 0', async () => {
     const run = await find('us-042');
 
     expect(run.exitCode).toBe(0);
-    expect(run.stdout).toBe('sin coincidencias para US-042 (estado: all)\n');
+    expect(run.stdout).toBe(
+      'schema: cli-find/v1\ncommand: find\nok: true\ndata:\n  matches[0]:\n  total: 0\n',
+    );
   });
 
   it('sin coincidencias en JSON es matches vacío con ok true', async () => {

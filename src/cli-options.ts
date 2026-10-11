@@ -10,8 +10,8 @@ import type { OutputFormat } from './output.js';
  * archivo de esa carpeta como un comando.
  */
 export type GlobalOptions = {
-  /** Valor tal cual llegó (`undefined` si no se pasó); el programa lo valida en `preAction`. */
-  output: OutputFormat | undefined;
+  /** Valor tal cual llegó; el programa lo valida en `preAction`. */
+  output: OutputFormat;
   repo?: string;
   changes?: string;
   current?: string;

@@ -8,10 +8,6 @@ export function registerHelloCommand(program: Command): void {
     .argument('[name]', 'nombre a saludar', 'world')
     .action((name: string, _opts: unknown, command: Command) => {
       const format = resolveOutputFormat(command.optsWithGlobals()['output']);
-      if (format === 'json') {
-        writeResult({ greeting: `hello ${name}` }, format);
-        return;
-      }
-      writeResult(`hello ${name}`, format);
+      writeResult({ greeting: `hello ${name}` }, format);
     });
 }

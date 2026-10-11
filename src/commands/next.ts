@@ -2,7 +2,7 @@ import type { Command } from 'commander';
 import { readGlobalOptions } from '../cli-options.js';
 import { openRepository, parseCount } from '../command-context.js';
 import { nextId, type NextIdQuery } from '../features/artifact-catalog/index.js';
-import { effectiveFormat, writePayload } from '../output.js';
+import { resolveOutputFormat, writePayload } from '../output.js';
 
 function optionText(value: unknown): string | undefined {
   return typeof value === 'string' ? value : undefined;
@@ -11,7 +11,7 @@ function optionText(value: unknown): string | undefined {
 export function registerNextCommand(program: Command): void {
   program
     .command('next')
-    .description('Siguiente identificador libre de un tipo, considerando activos y archivados (salida toon por defecto, o json con --output json)')
+    .description('Siguiente identificador libre de un tipo, considerando activos y archivados')
     .argument('<type>', 'tipo de artefacto (SRS, RQ, US, TK, WI, FT, TC, RS, WF, ADR, MD, API, FL, DG)')
     .option('--parent <id|path>', 'artefacto padre (obligatorio en TK, TC y WF; opcional en RS)')
     .option('--capability <name>', 'capability de docs/architecture/ (obligatoria en MD, API, FL y DG)')
@@ -28,6 +28,6 @@ export function registerNextCommand(program: Command): void {
       if (capability !== undefined) query.capability = capability;
 
       const result = await nextId(locate, base, query);
-      writePayload(result, effectiveFormat('next', globals.output));
+      writePayload(result, resolveOutputFormat(globals.output));
     });
 }
