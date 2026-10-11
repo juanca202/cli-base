@@ -58,4 +58,57 @@ describe('cli entrypoint', () => {
       expect.stringContaining('--output debe ser human o json'),
     );
   });
+
+  it('en modo json un comando desconocido emite un único cli-error/v1 por stdout con command null', async () => {
+    const { stdoutWrite } = await runCli(['bogus', '--output', 'json']);
+    expect(process.exitCode).toBe(2);
+    expect(stdoutWrite).toHaveBeenCalledTimes(1);
+    const payload = JSON.parse(String(stdoutWrite.mock.calls[0]?.[0]));
+    expect(payload).toMatchObject({
+      schema: 'cli-error/v1',
+      command: null,
+      ok: false,
+      error: { type: 'ValidationError', exitCode: 2, code: 'INVALID_FLAG_VALUE' },
+    });
+  });
+
+  it('en modo json un argumento requerido ausente se clasifica como MISSING_REQUIRED_FLAG', async () => {
+    const { stdoutWrite } = await runCli(['--output', 'json', '--repo']);
+    expect(process.exitCode).toBe(2);
+    const payload = JSON.parse(String(stdoutWrite.mock.calls[0]?.[0]));
+    expect(payload.error.code).toBe('MISSING_REQUIRED_FLAG');
+    expect(payload.command).toBeNull();
+  });
+
+  it('un --output inválido es INVALID_OUTPUT_FORMAT, código 2, sin envolvente por stdout', async () => {
+    const { stdoutWrite, stderrWrite } = await runCli(['hello', '--output', 'JSON']);
+    expect(process.exitCode).toBe(2);
+    expect(stdoutWrite).not.toHaveBeenCalled();
+    expect(stderrWrite).toHaveBeenCalledWith(expect.stringContaining('--output debe ser human o json'));
+  });
+
+  it('en modo humano un fallo escribe solo el diagnóstico por stderr', async () => {
+    const { stdoutWrite, stderrWrite } = await runCli(['bogus']);
+    expect(process.exitCode).toBe(2);
+    expect(stdoutWrite).not.toHaveBeenCalled();
+    expect(stderrWrite).toHaveBeenCalled();
+  });
+
+  it('un error no clasificado en una acción sale con código 1 y causa INTERNAL', async () => {
+    vi.doMock('./commands/hello.js', () => ({
+      registerHelloCommand: (program: import('commander').Command) => {
+        program.command('hello').action(() => {
+          throw new Error('fallo inesperado');
+        });
+      },
+    }));
+    const { stdoutWrite } = await runCli(['hello', '--output', 'json']);
+    vi.doUnmock('./commands/hello.js');
+    expect(process.exitCode).toBe(1);
+    const payload = JSON.parse(String(stdoutWrite.mock.calls[0]?.[0]));
+    expect(payload).toMatchObject({
+      command: null,
+      error: { type: 'RuntimeError', exitCode: 1, code: 'INTERNAL', message: 'fallo inesperado' },
+    });
+  });
 });
