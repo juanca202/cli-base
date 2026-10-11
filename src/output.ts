@@ -1,6 +1,7 @@
 import { toCliErrorFields, type CliErrorFields } from './errors.js';
+import { encodeToon } from './toon.js';
 
-export type OutputFormat = 'human' | 'json';
+export type OutputFormat = 'human' | 'json' | 'toon';
 
 /** Comandos de la envolvente MD-001 (`cli-<comando>/v1`). */
 export type CommandName = 'next' | 'find' | 'list' | 'worktree' | 'relations' | 'check';
@@ -19,13 +20,37 @@ export type FailureEnvelope = {
   error: CliErrorFields;
 };
 
+/**
+ * Formato de salida pedido con `--output`; un valor ausente o desconocido es
+ * `human` (el programa rechaza los desconocidos antes de ejecutar el comando).
+ */
 export function resolveOutputFormat(value: unknown): OutputFormat {
-  return value === 'json' ? 'json' : 'human';
+  return value === 'json' || value === 'toon' ? value : 'human';
+}
+
+/**
+ * Comandos que no tienen formato humano: su salida por defecto es `toon` y
+ * `--output human` es un error (`next`, cuyo consumidor es un agente o skill).
+ */
+const MACHINE_ONLY_COMMANDS: readonly string[] = ['next'];
+
+export function isMachineOnly(command: string | null): boolean {
+  return command !== null && MACHINE_ONLY_COMMANDS.includes(command);
+}
+
+/** Formato efectivo de un comando: el pedido, o `toon` si es solo-máquina y no se pidió. */
+export function effectiveFormat(command: string | null, requested: unknown): OutputFormat {
+  if (isMachineOnly(command)) return requested === 'json' ? 'json' : 'toon';
+  return resolveOutputFormat(requested);
 }
 
 export function writeResult(payload: unknown, format: OutputFormat): void {
   if (format === 'json') {
     process.stdout.write(`${JSON.stringify(payload)}\n`);
+    return;
+  }
+  if (format === 'toon') {
+    process.stdout.write(`${encodeToon(payload)}\n`);
     return;
   }
   process.stdout.write(`${typeof payload === 'string' ? payload : JSON.stringify(payload)}\n`);
@@ -45,7 +70,8 @@ export function failureEnvelope(command: CommandName | null, error: unknown): Fa
 
 /**
  * Éxito de un comando: en `json`, el envolvente MD-001 en una sola línea por
- * stdout; en `human`, el texto que produce `renderHuman`.
+ * stdout; en `toon`, el mismo envolvente en TOON; en `human`, el texto que
+ * produce `renderHuman`.
  */
 export function writeSuccess<T>(
   command: CommandName,
@@ -53,8 +79,8 @@ export function writeSuccess<T>(
   format: OutputFormat,
   renderHuman: (data: T) => string,
 ): void {
-  if (format === 'json') {
-    writeResult(successEnvelope(command, data), 'json');
+  if (format === 'json' || format === 'toon') {
+    writeResult(successEnvelope(command, data), format);
     return;
   }
   writeResult(renderHuman(data), 'human');
@@ -64,9 +90,17 @@ export function writeSuccess<T>(
  * Fallo clasificado: en `json`, un único `cli-error/v1` por stdout (sin
  * diagnóstico); en `human`, el mensaje por stderr.
  */
+/**
+ * Éxito de un comando solo-máquina: el payload tal cual, sin envolvente
+ * (`next`), en `toon` por defecto o en `json`.
+ */
+export function writePayload(data: unknown, format: OutputFormat): void {
+  writeResult(data, format === 'json' ? 'json' : 'toon');
+}
+
 export function writeFailure(error: unknown, command: CommandName | null, format: OutputFormat): void {
-  if (format === 'json') {
-    writeResult(failureEnvelope(command, error), 'json');
+  if (format === 'json' || format === 'toon') {
+    writeResult(failureEnvelope(command, error), format);
     return;
   }
   writeDiagnostic(toCliErrorFields(error).message);

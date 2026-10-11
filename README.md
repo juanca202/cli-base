@@ -21,7 +21,7 @@ cli <comando> [argumentos] [opciones]
 
 | Opción | Descripción |
 | ------ | ----------- |
-| `--output <human\|json>` | Formato de salida (por defecto `human`). Con `json`, una envolvente `cli-<comando>/v1` en una línea por stdout; un fallo es `cli-error/v1` |
+| `--output <human\|json\|toon>` | Formato de salida (por defecto `human`; `toon` en `next`, que no tiene formato humano). Con `json`, una envolvente `cli-<comando>/v1` en una línea por stdout (`next` emite su objeto plano); con `toon`, lo mismo en [TOON](https://toonformat.dev); un fallo es `cli-error/v1` |
 | `--repo <path>` | Repositorio de especificaciones (por defecto, la raíz git del directorio de trabajo) |
 | `--changes <path>` · `--current <path>` · `--archived <path>` | Rutas base; por defecto las de `.sdd-devkit/settings.json` o `docs/specs/changes`, `docs/specs/current`, `docs/specs/archived`. Una ruta explícita inexistente es error (código 3) |
 | `--arch-root <path>` | Raíz de arquitectura para los `ADR` |
@@ -36,23 +36,26 @@ sus hermanos más recientes, la ruta donde se creará y el estado del gestor de 
 
 ```bash
 cli next US
-# US-024
-# ruta destino: docs/specs/changes/user-stories/US-024-<slug>
-# hermanos: 23 (se muestran 3, de mayor a menor)
-#   docs/specs/changes/user-stories/US-023-x
-#   ...
-# gestor de proyectos: deshabilitado
+# next: US-024
+# siblings[3]: docs/specs/changes/user-stories/US-023-x,docs/specs/archived/user-stories/US-022-y,...
+# total: 23
+# truncated: true
+# targetPath: docs/specs/changes/user-stories/US-024-<slug>
+# projectManagement:
+#   enabled: false
 
+cli next US --output json            # el mismo objeto como JSON plano, en una línea
 cli next TK --parent US-010          # TK, TC, WF (y RS anidada) exigen --parent
 cli next WF --parent US-022          # numera dentro de wireframes/ del padre
 cli next MD --capability cli         # MD, API, FL y DG exigen --capability
 cli next US --limit 10               # máximo de hermanos a mostrar (por defecto 50)
-cli next US --output json            # envolvente cli-next/v1; `data` con next, siblings, total, truncated, targetPath y projectManagement
 ```
 
-La primera línea de la salida humana es solo el identificador. El secuencial tiene mínimo 3 dígitos y puede
-tener más (`US-1043`). Con `projectManagement` habilitado en `settings.json`, el id de `US`, `WI` y `TC` lo asigna
-el gestor: `next` devuelve `next: null` y `<id>` en la ruta destino. Un `--parent` archivado falla con
+`next` no tiene formato humano: por defecto emite TOON y con `--output json` el objeto JSON, **sin envolvente**
+(`next`, `siblings`, `total`, `truncated`, `targetPath`, `projectManagement`); `--output human` es
+`INVALID_OUTPUT_FORMAT`. Un fallo sí es `cli-error/v1`, en el mismo formato. El secuencial tiene mínimo 3 dígitos
+y puede tener más (`US-1043`). Con `projectManagement` habilitado en `settings.json`, el id de `US`, `WI` y `TC`
+lo asigna el gestor: `next` devuelve `next: null` y `<id>` en la ruta destino. Un `--parent` archivado falla con
 `ARTIFACT_ARCHIVED` (no se crea nada sobre un artefacto archivado). Los nombres fuera de patrón no aparecen en
 `next`: los reporta `check`.
 

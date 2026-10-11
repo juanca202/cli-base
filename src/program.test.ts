@@ -18,4 +18,21 @@ describe('createProgram', () => {
       expect(flags).not.toContain('--dry-run');
     }
   });
+
+  it('next no tiene formato humano: --output human es INVALID_OUTPUT_FORMAT', async () => {
+    const program = createProgram();
+    await expect(
+      program.parseAsync(['node', 'cli', 'next', 'US', '--output', 'human', '--repo', '/no/existe']),
+    ).rejects.toMatchObject({ code: 'INVALID_OUTPUT_FORMAT', exitCode: 2 });
+  });
+
+  it('--output acepta toon, json y human en el resto de los comandos', async () => {
+    for (const format of ['toon', 'json', 'human']) {
+      const program = createProgram();
+      // Falla después de validar --output (el repo no existe): el formato no es la causa.
+      await expect(
+        program.parseAsync(['node', 'cli', 'find', 'US-001', '--output', format, '--repo', '/no/existe']),
+      ).rejects.not.toMatchObject({ code: 'INVALID_OUTPUT_FORMAT' });
+    }
+  });
 });
