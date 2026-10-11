@@ -1,11 +1,11 @@
 ---
 id: ADR-004
-status: Accepted
-last_update: 2026-09-13
+status: Superseded
+last_update: 2026-10-11
 deciders: [Equipo]
 tags: [cli, output, json, contratos, agents]
 supersedes: null
-superseded_by: null
+superseded_by: ADR-009
 emits: [cli/CR-001, cli/CR-002]
 ---
 

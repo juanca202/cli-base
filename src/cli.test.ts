@@ -31,7 +31,7 @@ describe('cli entrypoint', () => {
   it('ejecuta un comando válido y sale con éxito', async () => {
     const { stdoutWrite } = await runCli(['hello', 'Ada']);
     expect(process.exitCode).toBe(0);
-    expect(stdoutWrite).toHaveBeenCalledWith('hello Ada\n');
+    expect(stdoutWrite).toHaveBeenCalledWith('greeting: hello Ada\n');
   });
 
   it('--help sale con éxito sin ejecutar comandos', async () => {
@@ -46,17 +46,15 @@ describe('cli entrypoint', () => {
   });
 
   it('un comando desconocido reporta el error de Commander y sale con INVALID_ARGUMENTS', async () => {
-    const { stderrWrite } = await runCli(['bogus']);
+    const { stdoutWrite } = await runCli(['bogus']);
     expect(process.exitCode).toBe(2);
-    expect(stderrWrite).toHaveBeenCalled();
+    expect(String(stdoutWrite.mock.calls[0]?.[0])).toContain('schema: cli-error/v1');
   });
 
   it('un ValidationError fuera de Commander se reporta con su propio exit code', async () => {
-    const { stderrWrite } = await runCli(['hello', '--output', 'xml']);
+    const { stdoutWrite } = await runCli(['hello', '--output', 'xml']);
     expect(process.exitCode).toBe(2);
-    expect(stderrWrite).toHaveBeenCalledWith(
-      expect.stringContaining('--output debe ser human, json o toon'),
-    );
+    expect(String(stdoutWrite.mock.calls[0]?.[0])).toContain('--output debe ser toon o json');
   });
 
   it('en modo json un comando desconocido emite un único cli-error/v1 por stdout con command null', async () => {
@@ -80,18 +78,21 @@ describe('cli entrypoint', () => {
     expect(payload.command).toBeNull();
   });
 
-  it('un --output inválido es INVALID_OUTPUT_FORMAT, código 2, sin envolvente por stdout', async () => {
-    const { stdoutWrite, stderrWrite } = await runCli(['hello', '--output', 'JSON']);
-    expect(process.exitCode).toBe(2);
-    expect(stdoutWrite).not.toHaveBeenCalled();
-    expect(stderrWrite).toHaveBeenCalledWith(expect.stringContaining('--output debe ser human, json o toon'));
+  it('un --output inválido (incluido human) es INVALID_OUTPUT_FORMAT, código 2, en TOON por stdout', async () => {
+    for (const value of ['JSON', 'human']) {
+      const { stdoutWrite } = await runCli(['hello', '--output', value]);
+      expect(process.exitCode).toBe(2);
+      const out = String(stdoutWrite.mock.calls[0]?.[0]);
+      expect(out).toContain('schema: cli-error/v1');
+      expect(out).toContain('code: INVALID_OUTPUT_FORMAT');
+      vi.restoreAllMocks();
+    }
   });
 
-  it('en modo humano un fallo escribe solo el diagnóstico por stderr', async () => {
-    const { stdoutWrite, stderrWrite } = await runCli(['bogus']);
+  it('por defecto un fallo es un cli-error/v1 en TOON por stdout, sin texto humano por stderr', async () => {
+    const { stdoutWrite } = await runCli(['bogus']);
     expect(process.exitCode).toBe(2);
-    expect(stdoutWrite).not.toHaveBeenCalled();
-    expect(stderrWrite).toHaveBeenCalled();
+    expect(String(stdoutWrite.mock.calls[0]?.[0])).toMatch(/^schema: cli-error\/v1\ncommand: null\nok: false\n/);
   });
 
   it('un error no clasificado en una acción sale con código 1 y causa INTERNAL', async () => {

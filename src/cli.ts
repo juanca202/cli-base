@@ -2,7 +2,7 @@
 import { CommanderError } from 'commander';
 import { createProgram } from './program.js';
 import { EXIT, ERROR_CODES, SUCCESS, ValidationError, exitCodeFor, type ErrorCode } from './errors.js';
-import { effectiveFormat, writeFailure, type CommandName } from './output.js';
+import { resolveOutputFormat, writeFailure, type CommandName } from './output.js';
 import { installProcessSignalHandlers } from './process-runner/process-signals.js';
 
 installProcessSignalHandlers();
@@ -31,9 +31,9 @@ async function main(): Promise<void> {
     await program.parseAsync(process.argv);
     process.exitCode = SUCCESS;
   } catch (error) {
-    // Un `--output` inválido no se trata como json: queda en modo humano (solo stderr).
+    // Un `--output` inválido no se trata como json: el fallo sale en TOON, el formato por defecto.
     const command = asCommandName(resolvedCommand);
-    const format = effectiveFormat(command, program.opts()['output']);
+    const format = resolveOutputFormat(program.opts()['output']);
 
     if (error instanceof CommanderError) {
       if (

@@ -2,13 +2,12 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ConfigurationError, RuntimeError, ValidationError } from './errors.js';
 import {
   failureEnvelope,
-  renderKeyValue,
-  renderTable,
   resolveOutputFormat,
   successEnvelope,
   writeDiagnostic,
   writeFailure,
   writeResult,
+  writePayload,
   writeSuccess,
 } from './output.js';
 
@@ -17,10 +16,11 @@ describe('resolveOutputFormat', () => {
     expect(resolveOutputFormat('json')).toBe('json');
   });
 
-  it('cae a human para cualquier otro valor', () => {
-    expect(resolveOutputFormat('human')).toBe('human');
-    expect(resolveOutputFormat('xml')).toBe('human');
-    expect(resolveOutputFormat(undefined)).toBe('human');
+  it('cae a toon (el formato por defecto) para cualquier otro valor', () => {
+    expect(resolveOutputFormat('toon')).toBe('toon');
+    expect(resolveOutputFormat('human')).toBe('toon');
+    expect(resolveOutputFormat('xml')).toBe('toon');
+    expect(resolveOutputFormat(undefined)).toBe('toon');
   });
 });
 
@@ -35,16 +35,10 @@ describe('writeResult', () => {
     expect(write).toHaveBeenCalledWith(`${JSON.stringify({ greeting: 'hola' })}\n`);
   });
 
-  it('escribe el string tal cual en formato human', () => {
+  it('escribe el payload como TOON cuando el formato es toon', () => {
     const write = vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
-    writeResult('hola', 'human');
-    expect(write).toHaveBeenCalledWith('hola\n');
-  });
-
-  it('serializa a JSON un payload no-string en formato human', () => {
-    const write = vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
-    writeResult({ greeting: 'hola' }, 'human');
-    expect(write).toHaveBeenCalledWith(`${JSON.stringify({ greeting: 'hola' })}\n`);
+    writeResult({ greeting: 'hola', tags: ['a', 'b'] }, 'toon');
+    expect(write).toHaveBeenCalledWith('greeting: hola\ntags[2]: a,b\n');
   });
 });
 
@@ -111,7 +105,7 @@ describe('writeSuccess', () => {
 
   it('en json escribe un único objeto en una sola línea por stdout', () => {
     const write = vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
-    writeSuccess('find', { matches: [], total: 0 }, 'json', () => 'no usado');
+    writeSuccess('find', { matches: [], total: 0 }, 'json');
     expect(write).toHaveBeenCalledTimes(1);
     const line = String(write.mock.calls[0]?.[0]);
     expect(line.endsWith('\n')).toBe(true);
@@ -124,10 +118,18 @@ describe('writeSuccess', () => {
     });
   });
 
-  it('en human escribe el texto renderizado', () => {
+  it('en toon escribe el mismo envolvente codificado en TOON', () => {
     const write = vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
-    writeSuccess('find', { total: 0 }, 'human', (data) => `total: ${data.total}`);
-    expect(write).toHaveBeenCalledWith('total: 0\n');
+    writeSuccess('find', { matches: [], total: 0 }, 'toon');
+    expect(write).toHaveBeenCalledWith(
+      'schema: cli-find/v1\ncommand: find\nok: true\ndata:\n  matches[0]:\n  total: 0\n',
+    );
+  });
+
+  it('writePayload emite el objeto tal cual, sin envolvente', () => {
+    const write = vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
+    writePayload({ next: 'US-001' }, 'json');
+    expect(write).toHaveBeenCalledWith('{"next":"US-001"}\n');
   });
 });
 
@@ -150,41 +152,12 @@ describe('writeFailure', () => {
     expect(err).not.toHaveBeenCalled();
   });
 
-  it('en human escribe solo el mensaje por stderr', () => {
+  it('en toon escribe el cli-error/v1 en TOON por stdout y nada por stderr', () => {
     const out = vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
     const err = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
-    writeFailure(new ValidationError('argumento inválido'), null, 'human');
-    expect(out).not.toHaveBeenCalled();
-    expect(err).toHaveBeenCalledWith('argumento inválido\n');
-  });
-});
-
-describe('renderTable', () => {
-  it('alinea columnas a ancho fijo, sin espacios finales', () => {
-    const table = renderTable(
-      ['ID', 'TIPO', 'RUTA'],
-      [
-        ['US-010', 'US', 'docs/a'],
-        ['SRS-001', 'SRS', 'docs/b'],
-      ],
-    );
-    expect(table).toBe(
-      ['ID       TIPO  RUTA', 'US-010   US    docs/a', 'SRS-001  SRS   docs/b'].join('\n'),
-    );
-  });
-
-  it('con filas vacías emite solo la cabecera', () => {
-    expect(renderTable(['ID', 'RUTA'], [])).toBe('ID  RUTA');
-  });
-});
-
-describe('renderKeyValue', () => {
-  it('emite una línea clave: valor por par, en el orden dado', () => {
-    expect(
-      renderKeyValue([
-        ['tipo', 'US'],
-        ['alcance', 'GLOBAL'],
-      ]),
-    ).toBe('tipo: US\nalcance: GLOBAL');
+    writeFailure(new ValidationError('argumento inválido'), null, 'toon');
+    expect(String(out.mock.calls[0]?.[0])).toContain('schema: cli-error/v1\ncommand: null\nok: false\n');
+    expect(String(out.mock.calls[0]?.[0])).toContain('  message: argumento inválido');
+    expect(err).not.toHaveBeenCalled();
   });
 });

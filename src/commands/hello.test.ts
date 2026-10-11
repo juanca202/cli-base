@@ -7,24 +7,24 @@ describe('hello', () => {
     vi.restoreAllMocks();
   });
 
-  it('imprime hello world cuando no hay nombre', async () => {
+  it('emite TOON por defecto cuando no hay nombre', async () => {
     const write = vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
     const program = createProgram();
     program.exitOverride();
 
     await program.parseAsync(['hello'], { from: 'user' });
 
-    expect(write).toHaveBeenCalledWith('hello world\n');
+    expect(write).toHaveBeenCalledWith('greeting: hello world\n');
   });
 
-  it('imprime hello con el nombre dado', async () => {
+  it('emite TOON con el nombre dado', async () => {
     const write = vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
     const program = createProgram();
     program.exitOverride();
 
     await program.parseAsync(['hello', 'Ada'], { from: 'user' });
 
-    expect(write).toHaveBeenCalledWith('hello Ada\n');
+    expect(write).toHaveBeenCalledWith('greeting: hello Ada\n');
   });
 
   it('emite JSON contractual con --output json', async () => {
@@ -37,12 +37,16 @@ describe('hello', () => {
     expect(write).toHaveBeenCalledWith(`${JSON.stringify({ greeting: 'hello Ada' })}\n`);
   });
 
-  it('rechaza --output distinto de human o json', async () => {
+  it('rechaza --output distinto de toon o json (incluido human)', async () => {
     const program = createProgram();
 
-    await expect(program.parseAsync(['hello', '--output', 'xml'], { from: 'user' })).rejects.toBeInstanceOf(
-      ValidationError,
-    );
+    for (const value of ['xml', 'human']) {
+      const fresh = createProgram();
+      await expect(fresh.parseAsync(['hello', '--output', value], { from: 'user' })).rejects.toBeInstanceOf(
+        ValidationError,
+      );
+    }
+    void program;
   });
 });
 

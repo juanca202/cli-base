@@ -21,7 +21,7 @@ cli <comando> [argumentos] [opciones]
 
 | Opción | Descripción |
 | ------ | ----------- |
-| `--output <human\|json\|toon>` | Formato de salida (por defecto `human`; `toon` en `next`, que no tiene formato humano). Con `json`, una envolvente `cli-<comando>/v1` en una línea por stdout (`next` emite su objeto plano); con `toon`, lo mismo en [TOON](https://toonformat.dev); un fallo es `cli-error/v1` |
+| `--output <toon\|json>` | Formato de salida (por defecto `toon`; no hay formato humano, ver [ADR-009](docs/adr/ADR-009-salida-toon-por-defecto-sin-formato-humano.md)). Una envolvente `cli-<comando>/v1` por stdout, en [TOON](https://toonformat.dev) o en JSON de una línea (`next` emite su objeto plano); un fallo es `cli-error/v1` en el mismo formato |
 | `--repo <path>` | Repositorio de especificaciones (por defecto, la raíz git del directorio de trabajo) |
 | `--changes <path>` · `--current <path>` · `--archived <path>` | Rutas base; por defecto las de `.sdd-devkit/settings.json` o `docs/specs/changes`, `docs/specs/current`, `docs/specs/archived`. Una ruta explícita inexistente es error (código 3) |
 | `--arch-root <path>` | Raíz de arquitectura para los `ADR` |
@@ -51,9 +51,9 @@ cli next MD --capability cli         # MD, API, FL y DG exigen --capability
 cli next US --limit 10               # máximo de hermanos a mostrar (por defecto 50)
 ```
 
-`next` no tiene formato humano: por defecto emite TOON y con `--output json` el objeto JSON, **sin envolvente**
-(`next`, `siblings`, `total`, `truncated`, `targetPath`, `projectManagement`); `--output human` es
-`INVALID_OUTPUT_FORMAT`. Un fallo sí es `cli-error/v1`, en el mismo formato. El secuencial tiene mínimo 3 dígitos
+`next` emite el objeto JSON o TOON **sin envolvente** (`next`, `siblings`, `total`, `truncated`, `targetPath`,
+`projectManagement`); `--output human` es `INVALID_OUTPUT_FORMAT`. Un fallo sí es `cli-error/v1`, en el mismo
+formato. El secuencial tiene mínimo 3 dígitos
 y puede tener más (`US-1043`). Con `projectManagement` habilitado en `settings.json`, el id de `US`, `WI` y `TC`
 lo asigna el gestor: `next` devuelve `next: null` y `<id>` en la ruta destino. Un `--parent` archivado falla con
 `ARTIFACT_ARCHIVED` (no se crea nada sobre un artefacto archivado). Los nombres fuera de patrón no aparecen en
@@ -63,8 +63,13 @@ lo asigna el gestor: `next` devuelve `next: null` y `<id>` en la ruta destino. U
 
 ```bash
 cli find US-010
-# ID      TIPO  ESTADO  RUTA
-# US-010  US    ACTIVE  docs/specs/changes/user-stories/US-010-cli-de-consultas-deterministas
+# schema: cli-find/v1
+# command: find
+# ok: true
+# data:
+#   matches[1]{id,type,slug,kind,state,path,documentPath,parent}:
+#     US-010,US,cli-de-consultas-deterministas,directory,ACTIVE,docs/specs/changes/user-stories/US-010-cli-de-consultas-deterministas,docs/specs/changes/user-stories/US-010-cli-de-consultas-deterministas/README.md,null
+#   total: 1
 
 cli find WF-001                      # todas las coincidencias (el secuencial de WF es por padre)
 cli find WF-001 --parent US-021      # restringe a la carpeta de un padre
@@ -72,7 +77,7 @@ cli find MD-001 --capability cli
 cli find US-010 --state archived     # active | archived | all (por defecto all)
 ```
 
-Sin coincidencias imprime `sin coincidencias para US-042 (estado: all)` y sale con `0`.
+Sin coincidencias devuelve `matches[0]:` con `total: 0` y sale con `0`.
 
 ### `list [type]` — listar artefactos
 
@@ -80,13 +85,13 @@ Sin coincidencias imprime `sin coincidencias para US-042 (estado: all)` y sale c
 cli list --state active                  # índice de artefactos activos (nunca incluye archivados)
 cli list US --state all
 cli list TK --parent US-010
-cli list WF --parent US-021 --with-status   # añade STATUS desde la marca oculta del documento
+cli list WF --parent US-021 --with-status   # añade `status` desde la marca oculta del documento
 cli list --state active --limit 20 --offset 40
 ```
 
 Sin `type` lista todos los tipos en el orden del catálogo. `--limit`/`--offset` (enteros ≥ 0) abren una ventana
-sobre el resultado ya ordenado; `--state` es sensible a mayúsculas. La salida humana termina con un resumen
-`<returned> de <total> artefactos (…)`.
+sobre el resultado ya ordenado; `--state` es sensible a mayúsculas. El payload lleva `items`, `total`, `returned`,
+`offset` y `limit`.
 
 ### Tipos de artefacto
 

@@ -26,20 +26,17 @@ describe('dry-run', () => {
     expect(isDryRun(program)).toBe(true);
   });
 
-  it('reportDryRun imprime el resumen de simulación por stdout en modo humano (por defecto)', () => {
+  it('reportDryRun imprime la simulación como TOON por stdout (por defecto)', () => {
     const write = vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
 
     reportDryRun(['Validate project configuration', 'Create runtime directory']);
 
-    const output = write.mock.calls.map(([chunk]) => String(chunk)).join('');
-    expect(output).toContain('DRY RUN');
-    expect(output).toContain('Would perform:');
-    expect(output).toContain('✓ Validate project configuration');
-    expect(output).toContain('✓ Create runtime directory');
-    expect(output).toContain('No changes were made.');
+    expect(write).toHaveBeenCalledWith(
+      'dryRun: true\nactions[2]: Validate project configuration,Create runtime directory\n',
+    );
   });
 
-  it('reportDryRun emite JSON parseable en modo máquina, sin prosa humana', () => {
+  it('reportDryRun emite JSON parseable con --output json', () => {
     const write = vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
 
     reportDryRun(['Validate project configuration'], 'json');
@@ -55,7 +52,7 @@ describe('dry-run', () => {
   it('compone con un comando real: --dry-run evita el efecto y respeta --output', async () => {
     const write = vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
     let sideEffectRan = false;
-    const program = new Command().exitOverride().option('--output <format>', '', 'human');
+    const program = new Command().exitOverride().option('--output <format>', '', 'toon');
     registerDryRunOption(program);
     program.action((_opts, command: Command) => {
       const format = resolveOutputFormat(command.optsWithGlobals()['output']);
@@ -64,7 +61,7 @@ describe('dry-run', () => {
         return;
       }
       sideEffectRan = true;
-      writeResult('done', format);
+      writeResult({ done: true }, format);
     });
 
     await program.parseAsync(['--dry-run', '--output', 'json'], { from: 'user' });

@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { readGlobalOptions, registerGlobalOptions } from './cli-options.js';
 
 function parse(args: string[]) {
-  const program = new Command().exitOverride().option('--output <format>', 'formato', 'human');
+  const program = new Command().exitOverride().option('--output <format>', 'formato', 'toon');
   registerGlobalOptions(program);
   let captured: ReturnType<typeof readGlobalOptions> | undefined;
   program
@@ -16,8 +16,8 @@ function parse(args: string[]) {
 }
 
 describe('readGlobalOptions', () => {
-  it('sin flags devuelve human y ninguna ruta base', () => {
-    expect(parse(['probe'])).toEqual({ output: 'human' });
+  it('sin flags devuelve toon y ninguna ruta base', () => {
+    expect(parse(['probe'])).toEqual({ output: 'toon' });
   });
 
   it('lee --output y los flags de rutas base como texto sin resolverlos', () => {
@@ -54,7 +54,7 @@ describe('readGlobalOptions', () => {
     });
   });
 
-  it('un --output fuera de human/json se conserva para que el programa lo rechace', () => {
+  it('un --output fuera de toon/json se conserva para que el programa lo rechace', () => {
     expect(parse(['probe', '--output', 'xml'])?.output).toBe('xml');
   });
 });

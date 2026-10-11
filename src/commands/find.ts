@@ -3,26 +3,12 @@ import { readGlobalOptions } from '../cli-options.js';
 import { openRepository } from '../command-context.js';
 import {
   locateById,
-  parseArtifactId,
-  type ArtifactRef,
   type LocateQuery,
 } from '../features/artifact-catalog/index.js';
-import { renderTable, resolveOutputFormat, writeSuccess } from '../output.js';
-
-type FindResult = { matches: ArtifactRef[]; total: number };
+import { resolveOutputFormat, writeSuccess } from '../output.js';
 
 function optionText(value: unknown): string | undefined {
   return typeof value === 'string' ? value : undefined;
-}
-
-export function renderFind(result: FindResult, id: string, state: string): string {
-  if (result.matches.length === 0) {
-    return `sin coincidencias para ${id} (estado: ${state})`;
-  }
-  return renderTable(
-    ['ID', 'TIPO', 'ESTADO', 'RUTA'],
-    result.matches.map((ref) => [ref.id, ref.type, ref.state, ref.path]),
-  );
 }
 
 export function registerFindCommand(program: Command): void {
@@ -44,12 +30,6 @@ export function registerFindCommand(program: Command): void {
       if (capability !== undefined) query.capability = capability;
 
       const matches = await locateById(locate, query);
-      const canonicalId = parseArtifactId(id).id;
-      writeSuccess(
-        'find',
-        { matches, total: matches.length },
-        resolveOutputFormat(globals.output),
-        (result) => renderFind(result, canonicalId, state),
-      );
+      writeSuccess('find', { matches, total: matches.length }, resolveOutputFormat(globals.output));
     });
 }

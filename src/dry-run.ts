@@ -10,18 +10,6 @@ export function isDryRun(command: Command): boolean {
   return Boolean(command.optsWithGlobals()['dryRun']);
 }
 
-export function reportDryRun(actions: string[], format: OutputFormat = 'human'): void {
-  if (format === 'json') {
-    writeResult({ dryRun: true, actions }, format);
-    return;
-  }
-  const lines = [
-    'DRY RUN',
-    '',
-    'Would perform:',
-    ...actions.map((action) => `  ✓ ${action}`),
-    '',
-    'No changes were made.',
-  ];
-  writeResult(lines.join('\n'), format);
+export function reportDryRun(actions: string[], format: OutputFormat = 'toon'): void {
+  writeResult({ dryRun: true, actions }, format);
 }
