@@ -55,7 +55,7 @@ describe('cli entrypoint', () => {
     const { stderrWrite } = await runCli(['hello', '--output', 'xml']);
     expect(process.exitCode).toBe(2);
     expect(stderrWrite).toHaveBeenCalledWith(
-      expect.stringContaining('--output debe ser human o json'),
+      expect.stringContaining('--output debe ser human, json o toon'),
     );
   });
 
@@ -84,7 +84,7 @@ describe('cli entrypoint', () => {
     const { stdoutWrite, stderrWrite } = await runCli(['hello', '--output', 'JSON']);
     expect(process.exitCode).toBe(2);
     expect(stdoutWrite).not.toHaveBeenCalled();
-    expect(stderrWrite).toHaveBeenCalledWith(expect.stringContaining('--output debe ser human o json'));
+    expect(stderrWrite).toHaveBeenCalledWith(expect.stringContaining('--output debe ser human, json o toon'));
   });
 
   it('en modo humano un fallo escribe solo el diagnóstico por stderr', async () => {

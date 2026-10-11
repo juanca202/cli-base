@@ -29,7 +29,7 @@ const SETTINGS_ENABLED = JSON.stringify({
 });
 
 describe('next', () => {
-  it('modo humano: el identificador va solo en la primera línea', async () => {
+  it('por defecto emite TOON con el esquema del ejemplo, sin envolvente', async () => {
     fx.write('docs/specs/changes/user-stories/US-023-x/README.md');
     fx.write('docs/specs/archived/user-stories/US-022-y/README.md');
 
@@ -38,48 +38,49 @@ describe('next', () => {
     expect(run.exitCode).toBe(0);
     expect(run.stdout).toBe(
       [
-        'US-024',
-        'ruta destino: docs/specs/changes/user-stories/US-024-<slug>',
-        'hermanos: 2',
-        '  docs/specs/changes/user-stories/US-023-x',
-        '  docs/specs/archived/user-stories/US-022-y',
-        'gestor de proyectos: deshabilitado',
+        'next: US-024',
+        'siblings[2]: docs/specs/changes/user-stories/US-023-x,docs/specs/archived/user-stories/US-022-y',
+        'total: 2',
+        'truncated: false',
+        'targetPath: docs/specs/changes/user-stories/US-024-<slug>',
+        'projectManagement:',
+        '  enabled: false',
         '',
       ].join('\n'),
     );
   });
 
-  it('modo humano indica cuántos hermanos se muestran cuando hay recorte', async () => {
+  it('--limit recorta siblings y marca truncated', async () => {
     for (const n of ['001', '002', '003']) {
       fx.write(`docs/specs/changes/user-stories/US-${n}-x/README.md`);
     }
 
     const run = await next('US', '--limit', '2');
 
-    expect(run.stdout.split('\n').slice(0, 5)).toEqual([
-      'US-004',
-      'ruta destino: docs/specs/changes/user-stories/US-004-<slug>',
-      'hermanos: 3 (se muestran 2, de mayor a menor)',
-      '  docs/specs/changes/user-stories/US-003-x',
-      '  docs/specs/changes/user-stories/US-002-x',
+    expect(run.stdout.split('\n').slice(0, 4)).toEqual([
+      'next: US-004',
+      'siblings[2]: docs/specs/changes/user-stories/US-003-x,docs/specs/changes/user-stories/US-002-x',
+      'total: 3',
+      'truncated: true',
     ]);
   });
 
-  it('modo humano de un WF muestra la ruta destino y sus hermanos', async () => {
+  it('un WF muestra la ruta destino dentro de wireframes/ del padre', async () => {
     fx.write('docs/specs/changes/user-stories/US-022-equipo/README.md');
     fx.write('docs/specs/changes/user-stories/US-022-equipo/wireframes/WF-003-team.md');
 
     const run = await next('WF', '--parent', 'US-022');
 
-    expect(run.stdout.split('\n').slice(0, 4)).toEqual([
-      'WF-004',
-      'ruta destino: docs/specs/changes/user-stories/US-022-equipo/wireframes/WF-004-<slug>.md',
-      'hermanos: 1',
-      '  docs/specs/changes/user-stories/US-022-equipo/wireframes/WF-003-team.md',
+    expect(run.stdout.split('\n').slice(0, 5)).toEqual([
+      'next: WF-004',
+      'siblings[1]: docs/specs/changes/user-stories/US-022-equipo/wireframes/WF-003-team.md',
+      'total: 1',
+      'truncated: false',
+      'targetPath: docs/specs/changes/user-stories/US-022-equipo/wireframes/WF-004-<slug>.md',
     ]);
   });
 
-  it('con el gestor habilitado la primera línea no es un identificador', async () => {
+  it('con el gestor habilitado next es null y projectManagement lleva los datos de conexión', async () => {
     fx.write('.sdd-devkit/settings.json', SETTINGS_ENABLED);
     fx.write('docs/specs/changes/user-stories/US-1847-a/README.md');
 
@@ -87,17 +88,23 @@ describe('next', () => {
 
     expect(run.stdout).toBe(
       [
-        'id: lo asigna el gestor de proyectos',
-        'ruta destino: docs/specs/changes/user-stories/<id>-<slug>',
-        'hermanos: 1',
-        '  docs/specs/changes/user-stories/US-1847-a',
-        'gestor de proyectos: azure-devops (acme/sdd-platform)',
+        'next: null',
+        'siblings[1]: docs/specs/changes/user-stories/US-1847-a',
+        'total: 1',
+        'truncated: false',
+        'targetPath: docs/specs/changes/user-stories/<id>-<slug>',
+        'projectManagement:',
+        '  enabled: true',
+        '  provider: azure-devops',
+        '  host: "https://dev.azure.com/acme"',
+        '  workspace: acme',
+        '  project: sdd-platform',
         '',
       ].join('\n'),
     );
   });
 
-  it('--output json emite la envolvente cli-next/v1 con MD-005 en data', async () => {
+  it('--output json emite el objeto del ejemplo, plano y en una línea', async () => {
     fx.write('docs/specs/changes/user-stories/US-001-a/README.md');
 
     const run = await next('us', '--output', 'json');
@@ -105,17 +112,12 @@ describe('next', () => {
     expect(run.stdout.endsWith('\n')).toBe(true);
     expect(run.stdout.trimEnd().split('\n')).toHaveLength(1);
     expect(JSON.parse(run.stdout)).toEqual({
-      schema: 'cli-next/v1',
-      command: 'next',
-      ok: true,
-      data: {
-        next: 'US-002',
-        siblings: ['docs/specs/changes/user-stories/US-001-a'],
-        total: 1,
-        truncated: false,
-        targetPath: 'docs/specs/changes/user-stories/US-002-<slug>',
-        projectManagement: { enabled: false },
-      },
+      next: 'US-002',
+      siblings: ['docs/specs/changes/user-stories/US-001-a'],
+      total: 1,
+      truncated: false,
+      targetPath: 'docs/specs/changes/user-stories/US-002-<slug>',
+      projectManagement: { enabled: false },
     });
   });
 
@@ -124,7 +126,7 @@ describe('next', () => {
 
     const run = await next('WI', '--output', 'json');
 
-    expect(JSON.parse(run.stdout).data).toEqual({
+    expect(JSON.parse(run.stdout)).toEqual({
       next: null,
       siblings: [],
       total: 0,
@@ -140,14 +142,25 @@ describe('next', () => {
     });
   });
 
+  it('el TOON y el JSON describen el mismo objeto', async () => {
+    fx.write('docs/specs/changes/user-stories/US-001-a/README.md');
+
+    const toon = await next('US');
+    const json = await next('US', '--output', 'json');
+
+    expect(toon.stdout).toContain('next: US-002');
+    expect(JSON.parse(json.stdout).next).toBe('US-002');
+  });
+
   it('la misma entrada produce la misma salida byte a byte', async () => {
     fx.write('docs/specs/changes/user-stories/US-001-a/README.md');
     fx.write('docs/specs/archived/user-stories/US-005-e/README.md');
 
-    const first = await next('US', '--output', 'json');
-    const second = await next('US', '--output', 'json');
-
-    expect(second.stdout).toBe(first.stdout);
+    for (const format of [[], ['--output', 'json']]) {
+      const first = await next('US', ...format);
+      const second = await next('US', ...format);
+      expect(second.stdout).toBe(first.stdout);
+    }
   });
 
   it.each([

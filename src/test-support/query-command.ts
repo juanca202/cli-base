@@ -56,7 +56,7 @@ export async function runQueryCommand(
     return true;
   });
 
-  const program = new Command().exitOverride().option('--output <format>', 'formato', 'human');
+  const program = new Command().exitOverride().option('--output <format>', 'formato');
   registerGlobalOptions(program);
   register(program);
 
