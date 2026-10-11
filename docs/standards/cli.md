@@ -2,20 +2,20 @@
 name: Estándares de CLI
 domain: cli
 status: Active
-last_update: 2026-09-13
-source_adrs: [ADR-004, ADR-005, ADR-008]
+last_update: 2026-10-11
+source_adrs: [ADR-009, ADR-005, ADR-008]
 tags: [cli, output, json, contratos, errors, exit-codes, dry-run]
 ---
 
 # Estándares de CLI
 
-Normas de la interfaz de línea de comandos de esta plantilla: salida a humanos y a consumidores automatizados, y cómo se clasifican los fallos y los códigos de proceso.
+Normas de la interfaz de línea de comandos de esta plantilla: salida estructurada para consumidores automatizados, y cómo se clasifican los fallos y los códigos de proceso.
 
 ## Contratos de entrada/salida
 **ID:** io-contracts
 **Estado:** Active
 
-La CLI tiene dos modos de salida. El modo humano es el predeterminado y está pensado para lectura en terminal. El modo máquina se activa con `--output json` y es el contrato estable para integración automatizada. Todo comando que produzca un resultado observable **DEBE** aceptar `--output json` y, en ese modo, emitir por stdout un JSON parseable y versionable, sin mezclar prosa humana. Los mensajes de progreso o diagnóstico **NO DEBEN** contaminar stdout en modo máquina.
+La CLI no tiene formato humano: `--output` acepta solo `toon` (por defecto) y `json`, y cualquier otro valor **DEBE** rechazarse con `INVALID_OUTPUT_FORMAT`. Todo comando que produzca un resultado observable **DEBE** emitir por stdout, en el formato elegido, un documento parseable y versionable (el envolvente `cli-<comando>/v<n>`, o el objeto plano en los comandos que lo declaren), y los fallos **DEBEN** emitirse en el mismo formato como `cli-error/v1`. Los mensajes de progreso o diagnóstico **NO DEBEN** contaminar stdout.
 
 ### Excepciones
 Comandos que no producen un resultado de negocio (solo `--help`, `--version` nativos del parser) **PUEDEN** conservar la salida de ayuda/versión del framework.
@@ -24,7 +24,7 @@ Comandos que no producen un resultado de negocio (solo `--help`, `--version` nat
 **ID:** error-model
 **Estado:** Active
 
-Los fallos se clasifican con `RuntimeError` como tipo base y las especializaciones `ConfigurationError`, `ValidationError`, `ProcessError`, `ConnectionError` y `ExternalServiceError`. El proceso **DEBE** terminar con un código de salida del conjunto fijo 0–5: 0 éxito; 1 `RuntimeError`; 2 `ValidationError`; 3 `ConfigurationError`; 4 `ConnectionError`; 5 `ProcessError` o `ExternalServiceError`. Ese código es el contrato para que skills y agents reaccionen sin parsear la salida humana.
+Los fallos se clasifican con `RuntimeError` como tipo base y las especializaciones `ConfigurationError`, `ValidationError`, `ProcessError`, `ConnectionError` y `ExternalServiceError`. El proceso **DEBE** terminar con un código de salida del conjunto fijo 0–5: 0 éxito; 1 `RuntimeError`; 2 `ValidationError`; 3 `ConfigurationError`; 4 `ConnectionError`; 5 `ProcessError` o `ExternalServiceError`. Ese código es el contrato para que skills y agents reaccionen sin parsear la salida.
 
 ### Excepciones
 `--help` y `--version` del parser **PUEDEN** usar el código de salida que defina Commander (habitualmente 0). Un `process.exit` de emergencia fuera de la CLI (señal, abort del runtime) queda fuera de este requisito.
