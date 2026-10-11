@@ -16,7 +16,7 @@ export type RepoFixture = {
 /** Repositorio git temporal sobre el que los comandos de consulta corren con `--repo`. */
 export async function createRepoFixture(): Promise<RepoFixture> {
   const root = mkdtempSync(join(tmpdir(), 'cli-command-'));
-  await new ProcessRunner().run('git', ['init', '-q'], { cwd: root });
+  await new ProcessRunner().run('git', ['init', '-q', '-b', 'main'], { cwd: root });
   return {
     root,
     write(path, content = '') {

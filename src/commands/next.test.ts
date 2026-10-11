@@ -4,6 +4,7 @@ import {
   runQueryCommand,
   type RepoFixture,
 } from '../test-support/query-command.js';
+import { ProcessRunner } from '../process-runner/process-runner.js';
 import { registerNextCommand } from './next.js';
 
 let fx: RepoFixture;
@@ -45,6 +46,11 @@ describe('next', () => {
         'targetPath: docs/specs/changes/user-stories/US-024-<slug>',
         'projectManagement:',
         '  enabled: false',
+        'branch: main',
+        'language: null',
+        'testCases:',
+        '  createMode: ask',
+        '  createDetailsMode: ask',
         '',
       ].join('\n'),
     );
@@ -99,6 +105,11 @@ describe('next', () => {
         '  host: "https://dev.azure.com/acme"',
         '  workspace: acme',
         '  project: sdd-platform',
+        'branch: main',
+        'language: null',
+        'testCases:',
+        '  createMode: ask',
+        '  createDetailsMode: ask',
         '',
       ].join('\n'),
     );
@@ -118,6 +129,9 @@ describe('next', () => {
       truncated: false,
       targetPath: 'docs/specs/changes/user-stories/US-002-<slug>',
       projectManagement: { enabled: false },
+      branch: 'main',
+      language: null,
+      testCases: { createMode: 'ask', createDetailsMode: 'ask' },
     });
   });
 
@@ -139,7 +153,56 @@ describe('next', () => {
         workspace: 'acme',
         project: 'sdd-platform',
       },
+      branch: 'main',
+      language: null,
+      testCases: { createMode: 'ask', createDetailsMode: 'ask' },
     });
+  });
+
+  it('lee language y la política de casos de prueba de settings.json', async () => {
+    fx.write(
+      '.sdd-devkit/settings.json',
+      JSON.stringify({
+        language: 'es',
+        specification: { testCases: { createMode: 'always', createDetailsMode: 'never' } },
+      }),
+    );
+
+    const run = await next('US', '--output', 'json');
+
+    expect(JSON.parse(run.stdout)).toMatchObject({
+      language: 'es',
+      testCases: { createMode: 'always', createDetailsMode: 'never' },
+    });
+  });
+
+  it('un valor inválido de testCases es INVALID_SETTINGS con código 3', async () => {
+    fx.write(
+      '.sdd-devkit/settings.json',
+      JSON.stringify({ specification: { testCases: { createMode: 'siempre' } } }),
+    );
+
+    const run = await next('US');
+
+    expect(run.exitCode).toBe(3);
+    expect(run.error).toMatchObject({ code: 'INVALID_SETTINGS' });
+  });
+
+  it('con HEAD desacoplado la rama es null', async () => {
+    fx.write('a.txt', 'x');
+    const runner = new ProcessRunner();
+    const opts = { cwd: fx.root };
+    await runner.run('git', ['add', '.'], opts);
+    await runner.run(
+      'git',
+      ['-c', 'user.email=t@t', '-c', 'user.name=t', 'commit', '-q', '-m', 'init'],
+      opts,
+    );
+    await runner.run('git', ['checkout', '-q', '--detach'], opts);
+
+    const run = await next('US', '--output', 'json');
+
+    expect(JSON.parse(run.stdout).branch).toBeNull();
   });
 
   it('el TOON y el JSON describen el mismo objeto', async () => {

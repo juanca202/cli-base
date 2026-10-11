@@ -43,6 +43,11 @@ cli next US
 # targetPath: docs/specs/changes/user-stories/US-024-<slug>
 # projectManagement:
 #   enabled: false
+# branch: develop
+# language: es
+# testCases:
+#   createMode: ask
+#   createDetailsMode: never
 
 cli next US --output json            # el mismo objeto como JSON plano, en una línea
 cli next TK --parent US-010          # TK, TC, WF (y RS anidada) exigen --parent
@@ -52,9 +57,11 @@ cli next US --limit 10               # máximo de hermanos a mostrar (por defect
 ```
 
 `next` emite el objeto JSON o TOON **sin envolvente** (`next`, `siblings`, `total`, `truncated`, `targetPath`,
-`projectManagement`); `--output human` es `INVALID_OUTPUT_FORMAT`. Un fallo sí es `cli-error/v1`, en el mismo
-formato. El secuencial tiene mínimo 3 dígitos
-y puede tener más (`US-1043`). Con `projectManagement` habilitado en `settings.json`, el id de `US`, `WI` y `TC`
+`projectManagement`, `branch`, `language`, `testCases`); `--output human` es `INVALID_OUTPUT_FORMAT`. Un fallo sí
+es `cli-error/v1`, en el mismo formato. `branch` es la rama actual del repositorio de especificaciones (`null` con
+HEAD desacoplado), `language` el `language` de `settings.json` (`null` si no está) y `testCases` la política
+`specification.testCases` (`ask`/`ask` por defecto). El secuencial tiene mínimo 3 dígitos y puede tener más
+(`US-1043`). Con `projectManagement` habilitado en `settings.json`, el id de `US`, `WI` y `TC`
 lo asigna el gestor: `next` devuelve `next: null` y `<id>` en la ruta destino. Un `--parent` archivado falla con
 `ARTIFACT_ARCHIVED` (no se crea nada sobre un artefacto archivado). Los nombres fuera de patrón no aparecen en
 `next`: los reporta `check`.

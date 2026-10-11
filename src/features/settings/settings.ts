@@ -1,6 +1,6 @@
 import { isAbsolute, relative, resolve, sep } from 'node:path';
 import { ConfigurationError, ERROR_CODES } from '../../errors.js';
-import { findRepositoryRoot } from './infra/git-root.js';
+import { findRepositoryRoot, readCurrentBranch } from './infra/git-root.js';
 import {
   SETTINGS_RELATIVE_PATH,
   pathExists,
@@ -38,6 +38,22 @@ export type ProjectManagementSettings =
   | { enabled: false }
   | { enabled: true; provider: string; host: string; workspace: string; project: string };
 
+/**
+ * Política de definición de casos de prueba (`specification.testCases`):
+ * `createMode` decide si se ofrece o invoca `test-define` y si se pide la
+ * aceptación final; `createDetailsMode`, si se hace la entrevista de
+ * clarificación. Sin la clave, los valores por defecto del catálogo.
+ */
+export type TestCasesPolicy = {
+  createMode: 'ask' | 'always' | 'never';
+  createDetailsMode: 'ask' | 'never';
+};
+
+export const DEFAULT_TEST_CASES_POLICY: TestCasesPolicy = {
+  createMode: 'ask',
+  createDetailsMode: 'ask',
+};
+
 export type ResolvedSettings = {
   repoRoot: string;
   changesPath: string;
@@ -46,15 +62,26 @@ export type ResolvedSettings = {
   archRoot: string;
   workTreePath: string;
   projectManagement: ProjectManagementSettings;
+  /** Idioma de los artefactos (`language` de `settings.json`), o `null` si no se declaró. */
+  language: string | null;
+  testCases: TestCasesPolicy;
+  /** Rama actual del repositorio de especificaciones; `null` con HEAD desacoplado. */
+  branch: string | null;
 };
 
 export type SettingsPorts = {
   findRepositoryRoot: typeof findRepositoryRoot;
+  readCurrentBranch: typeof readCurrentBranch;
   readSettingsFile: (repoRoot: string) => Promise<unknown>;
   pathExists: (absolutePath: string) => Promise<boolean>;
 };
 
-const DEFAULT_PORTS: SettingsPorts = { findRepositoryRoot, readSettingsFile, pathExists };
+const DEFAULT_PORTS: SettingsPorts = {
+  findRepositoryRoot,
+  readCurrentBranch,
+  readSettingsFile,
+  pathExists,
+};
 
 type FileSettings = {
   changesPath?: string;
@@ -62,6 +89,8 @@ type FileSettings = {
   archivedPath?: string;
   workTreePath?: string;
   projectManagement?: ProjectManagementSettings;
+  language?: string;
+  testCases?: Partial<TestCasesPolicy>;
 };
 
 function invalidSettings(reason: string): ConfigurationError {
@@ -91,6 +120,40 @@ function readSection(root: Record<string, unknown>, key: string): Record<string,
     throw invalidSettings(`${key} debe ser un objeto`);
   }
   return section;
+}
+
+function readEnum<T extends string>(
+  section: Record<string, unknown>,
+  key: string,
+  label: string,
+  allowed: readonly T[],
+): T | undefined {
+  const value = readString(section, key, label);
+  if (value === undefined) return undefined;
+  if (!(allowed as readonly string[]).includes(value)) {
+    throw invalidSettings(`${label} debe ser ${allowed.join(', ')}`);
+  }
+  return value as T;
+}
+
+function readTestCases(specification: Record<string, unknown>): Partial<TestCasesPolicy> | undefined {
+  if (specification['testCases'] === undefined) return undefined;
+  const section = readSection(specification, 'testCases');
+  const policy: Partial<TestCasesPolicy> = {};
+  const createMode = readEnum(section, 'createMode', 'specification.testCases.createMode', [
+    'ask',
+    'always',
+    'never',
+  ]);
+  const createDetailsMode = readEnum(
+    section,
+    'createDetailsMode',
+    'specification.testCases.createDetailsMode',
+    ['ask', 'never'],
+  );
+  if (createMode !== undefined) policy.createMode = createMode;
+  if (createDetailsMode !== undefined) policy.createDetailsMode = createDetailsMode;
+  return policy;
 }
 
 function readProjectManagement(
@@ -137,6 +200,10 @@ export function parseFileSettings(raw: unknown): FileSettings {
   const workTree = readString(implementation, 'workTreePath', 'implementation.workTreePath');
   const projectManagement = readProjectManagement(raw);
   if (projectManagement !== undefined) parsed.projectManagement = projectManagement;
+  const language = readString(raw, 'language', 'language');
+  if (language !== undefined) parsed.language = language;
+  const testCases = readTestCases(specification);
+  if (testCases !== undefined) parsed.testCases = testCases;
   if (changes !== undefined) parsed.changesPath = changes;
   if (current !== undefined) parsed.currentPath = current;
   if (archived !== undefined) parsed.archivedPath = archived;
@@ -210,5 +277,8 @@ export async function resolveSettings(
     archRoot: pick(request.archRoot, undefined, DEFAULT_ARCH_ROOT),
     workTreePath: pick(undefined, file.workTreePath, DEFAULT_WORKTREE_PATH),
     projectManagement: file.projectManagement ?? { enabled: false },
+    language: file.language ?? null,
+    testCases: { ...DEFAULT_TEST_CASES_POLICY, ...file.testCases },
+    branch: await ports.readCurrentBranch(repoRoot),
   };
 }

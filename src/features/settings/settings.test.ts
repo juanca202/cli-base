@@ -52,6 +52,9 @@ describe('resolveSettings', () => {
       archRoot: '.',
       workTreePath: DEFAULT_WORKTREE_PATH,
       projectManagement: { enabled: false },
+      language: null,
+      testCases: { createMode: 'ask', createDetailsMode: 'ask' },
+      branch: expect.any(String),
     });
   });
 
