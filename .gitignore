@@ -3,3 +3,6 @@ dist/
 coverage/
 .sdd-devkit/.env
 .sdd-devkit/test-run.json
+
+# caché local de quality-check
+.sdd-devkit/quality-check-run.json

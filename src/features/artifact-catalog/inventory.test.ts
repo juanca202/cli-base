@@ -206,6 +206,19 @@ describe('determinismo', () => {
   });
 });
 
+describe('orden por secuencial', () => {
+  it('ordena numéricamente cuando el secuencial pasa de 3 dígitos', async () => {
+    touch('docs/specs/changes/user-stories/US-1000-b/README.md');
+    touch('docs/specs/changes/user-stories/US-999-a/README.md');
+    touch('docs/specs/changes/user-stories/US-1043-c/README.md');
+    touch('docs/specs/changes/user-stories/US-100-d/README.md');
+
+    const { artifacts } = await buildInventory(createFileSystem(root), BASE);
+
+    expect(artifacts.map((ref) => ref.id)).toEqual(['US-100', 'US-999', 'US-1000', 'US-1043']);
+  });
+});
+
 describe('filterArtifacts', () => {
   async function fixture() {
     touch('docs/specs/changes/user-stories/US-010-a/README.md');

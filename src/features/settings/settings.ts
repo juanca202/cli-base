@@ -29,6 +29,15 @@ export type SettingsRequest = {
  * para I/O; cada ruta base es POSIX, sin barra final, relativa a `repoRoot`
  * (o absoluta si cae fuera del repositorio).
  */
+/**
+ * Estado de la integración con el gestor de proyectos (`projectManagement` de
+ * `settings.json`): deshabilitada, o habilitada con los datos de conexión (sin
+ * credenciales, que viven en `.sdd-devkit/.env`).
+ */
+export type ProjectManagementSettings =
+  | { enabled: false }
+  | { enabled: true; provider: string; host: string; workspace: string; project: string };
+
 export type ResolvedSettings = {
   repoRoot: string;
   changesPath: string;
@@ -36,6 +45,7 @@ export type ResolvedSettings = {
   archivedPath: string;
   archRoot: string;
   workTreePath: string;
+  projectManagement: ProjectManagementSettings;
 };
 
 export type SettingsPorts = {
@@ -51,6 +61,7 @@ type FileSettings = {
   currentPath?: string;
   archivedPath?: string;
   workTreePath?: string;
+  projectManagement?: ProjectManagementSettings;
 };
 
 function invalidSettings(reason: string): ConfigurationError {
@@ -82,8 +93,34 @@ function readSection(root: Record<string, unknown>, key: string): Record<string,
   return section;
 }
 
+function readProjectManagement(
+  root: Record<string, unknown>,
+): ProjectManagementSettings | undefined {
+  if (root['projectManagement'] === undefined) return undefined;
+  const section = readSection(root, 'projectManagement');
+  const enabled = section['enabled'];
+  if (typeof enabled !== 'boolean') {
+    throw invalidSettings('projectManagement.enabled debe ser un booleano');
+  }
+  if (!enabled) return { enabled: false };
+  const field = (key: string): string => {
+    const value = readString(section, key, `projectManagement.${key}`);
+    if (value === undefined) {
+      throw invalidSettings(`projectManagement.${key} es obligatorio con enabled: true`);
+    }
+    return value;
+  };
+  return {
+    enabled: true,
+    provider: field('provider'),
+    host: field('host'),
+    workspace: field('workspace'),
+    project: field('project'),
+  };
+}
+
 /**
- * Extrae las cuatro claves que interpreta el CLI. Las claves heredadas
+ * Extrae las claves que interpreta el CLI. Las claves heredadas
  * `basePath`/`archivePath` y cualquier otra se ignoran.
  */
 export function parseFileSettings(raw: unknown): FileSettings {
@@ -98,6 +135,8 @@ export function parseFileSettings(raw: unknown): FileSettings {
   const current = readString(specification, 'currentPath', 'specification.currentPath');
   const archived = readString(specification, 'archivedPath', 'specification.archivedPath');
   const workTree = readString(implementation, 'workTreePath', 'implementation.workTreePath');
+  const projectManagement = readProjectManagement(raw);
+  if (projectManagement !== undefined) parsed.projectManagement = projectManagement;
   if (changes !== undefined) parsed.changesPath = changes;
   if (current !== undefined) parsed.currentPath = current;
   if (archived !== undefined) parsed.archivedPath = archived;
@@ -170,5 +209,6 @@ export async function resolveSettings(
     archivedPath: pick(request.archived, file.archivedPath, DEFAULT_ARCHIVED_PATH),
     archRoot: pick(request.archRoot, undefined, DEFAULT_ARCH_ROOT),
     workTreePath: pick(undefined, file.workTreePath, DEFAULT_WORKTREE_PATH),
+    projectManagement: file.projectManagement ?? { enabled: false },
   };
 }

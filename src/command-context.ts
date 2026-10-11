@@ -4,13 +4,15 @@ import {
   type BasePaths,
   type LocateContext,
 } from './features/artifact-catalog/index.js';
-import { resolveSettings } from './features/settings/index.js';
+import { resolveSettings, type ProjectManagementSettings } from './features/settings/index.js';
 import type { GlobalOptions } from './cli-options.js';
 
 export type RepositoryContext = {
   /** Lectura del inventario ya construido, lista para `locateById`, `nextId`, `listArtifacts`. */
   locate: LocateContext;
   base: BasePaths;
+  /** Integración con el gestor de proyectos declarada en `settings.json`. */
+  projectManagement: ProjectManagementSettings;
 };
 
 /**
@@ -35,7 +37,11 @@ export async function openRepository(options: GlobalOptions): Promise<Repository
     archRoot: settings.archRoot,
   };
   const { artifacts } = await buildInventory(fs, base);
-  return { locate: { fs, repoRoot: settings.repoRoot, artifacts }, base };
+  return {
+    locate: { fs, repoRoot: settings.repoRoot, artifacts },
+    base,
+    projectManagement: settings.projectManagement,
+  };
 }
 
 /**

@@ -8,7 +8,7 @@ export type ParsedArtifactId = {
   id: string;
 };
 
-const ID_PATTERN = /^([A-Za-z]+)-(\d{3})$/;
+const ID_PATTERN = /^([A-Za-z]+)-(\d{3,})$/;
 
 function isArtifactType(value: string): value is ArtifactType {
   return (ARTIFACT_TYPES as readonly string[]).includes(value);
@@ -38,7 +38,7 @@ export function parseArtifactId(input: string): ParsedArtifactId {
   const match = ID_PATTERN.exec(input.trim());
   if (match === null) {
     throw new ValidationError(
-      `Identificador mal formado: ${input}. Se espera <TIPO>-<3 dígitos>, p. ej. US-010.`,
+      `Identificador mal formado: ${input}. Se espera <TIPO>-<3 dígitos o más>, p. ej. US-010.`,
       { code: ERROR_CODES.MALFORMED_ID, details: { id: input } },
     );
   }

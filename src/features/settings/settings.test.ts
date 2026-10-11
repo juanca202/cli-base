@@ -51,6 +51,40 @@ describe('resolveSettings', () => {
       archivedPath: DEFAULT_ARCHIVED_PATH,
       archRoot: '.',
       workTreePath: DEFAULT_WORKTREE_PATH,
+      projectManagement: { enabled: false },
+    });
+  });
+
+  it('lee projectManagement habilitado con sus datos de conexión', async () => {
+    initRepo(dir);
+    const connection = {
+      enabled: true,
+      provider: 'azure-devops',
+      host: 'https://dev.azure.com/acme',
+      workspace: 'acme',
+      project: 'sdd-platform',
+    };
+    writeSettings(dir, JSON.stringify({ projectManagement: connection }));
+    const settings = await resolveSettings({ repo: dir, cwd: dir });
+    expect(settings.projectManagement).toEqual(connection);
+  });
+
+  it('projectManagement deshabilitado no exige el resto de sus claves', async () => {
+    initRepo(dir);
+    writeSettings(dir, JSON.stringify({ projectManagement: { enabled: false } }));
+    const settings = await resolveSettings({ repo: dir, cwd: dir });
+    expect(settings.projectManagement).toEqual({ enabled: false });
+  });
+
+  it.each([
+    [{ enabled: 'si' }],
+    [{ enabled: true, provider: 'jira' }],
+  ])('projectManagement inválido %j es INVALID_SETTINGS', async (projectManagement) => {
+    initRepo(dir);
+    writeSettings(dir, JSON.stringify({ projectManagement }));
+    await expect(resolveSettings({ repo: dir, cwd: dir })).rejects.toMatchObject({
+      code: 'INVALID_SETTINGS',
+      exitCode: 3,
     });
   });
 

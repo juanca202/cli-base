@@ -42,7 +42,7 @@ export type ArtifactTypeDescriptor = {
   unparentedPathTemplate?: string;
   /** `null` si el tipo no se archiva o hereda el archivado de su padre. */
   archivePathTemplate: string | null;
-  /** Patrón del nombre de carpeta o archivo, sin anclar; secuencial de 3 dígitos. */
+  /** Patrón del nombre de carpeta o archivo, sin anclar; secuencial de mínimo 3 dígitos (`\\d{3}` se lee `\\d{3,}`). */
   namePattern: string;
   parentTypes: readonly ArtifactType[];
   requiresParent: boolean;
@@ -230,5 +230,5 @@ export function catalogOrder(type: ArtifactType): number {
 
 /** Expresión anclada del patrón de nombre; el grupo 1 captura el secuencial. */
 export function nameRegExp(descriptor: ArtifactTypeDescriptor): RegExp {
-  return new RegExp(`^${descriptor.namePattern.replace('\\d{3}', '(\\d{3})')}$`);
+  return new RegExp(`^${descriptor.namePattern.replace('\\d{3}', '(\\d{3,})')}$`);
 }

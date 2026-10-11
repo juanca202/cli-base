@@ -31,22 +31,30 @@ Códigos de salida: `0` éxito, `1` error interno, `2` argumentos inválidos, `3
 
 ### `next <type>` — siguiente identificador libre
 
-Devuelve el siguiente identificador del tipo considerando la ruta activa **y** la archivada; no rellena huecos.
+Devuelve el siguiente identificador del tipo considerando la ruta activa **y** la archivada (no rellena huecos),
+sus hermanos más recientes, la ruta donde se creará y el estado del gestor de proyectos.
 
 ```bash
 cli next US
 # US-024
-# tipo: US · alcance: GLOBAL · máximo ocupado: US-023
-# rutas consultadas: docs/specs/changes/user-stories, docs/specs/archived/user-stories
+# ruta destino: docs/specs/changes/user-stories/US-024-<slug>
+# hermanos: 23 (se muestran 3, de mayor a menor)
+#   docs/specs/changes/user-stories/US-023-x
+#   ...
+# gestor de proyectos: deshabilitado
 
 cli next TK --parent US-010          # TK, TC, WF (y RS anidada) exigen --parent
 cli next WF --parent US-022          # numera dentro de wireframes/ del padre
 cli next MD --capability cli         # MD, API, FL y DG exigen --capability
-cli next US --output json
+cli next US --limit 10               # máximo de hermanos a mostrar (por defecto 50)
+cli next US --output json            # envolvente cli-next/v1; `data` con next, siblings, total, truncated, targetPath y projectManagement
 ```
 
-La primera línea de la salida humana es solo el identificador. Las entradas con nombre no conforme no suben el
-máximo y se reportan en `ignored` (línea `entradas no conformes:` en modo humano).
+La primera línea de la salida humana es solo el identificador. El secuencial tiene mínimo 3 dígitos y puede
+tener más (`US-1043`). Con `projectManagement` habilitado en `settings.json`, el id de `US`, `WI` y `TC` lo asigna
+el gestor: `next` devuelve `next: null` y `<id>` en la ruta destino. Un `--parent` archivado falla con
+`ARTIFACT_ARCHIVED` (no se crea nada sobre un artefacto archivado). Los nombres fuera de patrón no aparecen en
+`next`: los reporta `check`.
 
 ### `find <id>` — localizar un artefacto
 

@@ -166,7 +166,7 @@ function sweepEntries(
       const slugSource =
         descriptor.kind === 'file' ? entry.name.replace(/\.md$/, '') : entry.name;
       artifacts.push({
-        id: `${descriptor.type}-${sequence}`,
+        id: `${descriptor.type}-${String(Number(sequence)).padStart(3, '0')}`,
         type: descriptor.type,
         slug: slugSource.slice(`${descriptor.type}-${sequence}-`.length),
         kind: descriptor.kind,
@@ -211,9 +211,15 @@ async function sweep(
   return sweepEntries(request, entries);
 }
 
+/** Secuencial numérico de un id (`US-1043` → 1043): `US-999` < `US-1000`. */
+function sequenceOf(id: string): number {
+  return Number(id.slice(id.lastIndexOf('-') + 1));
+}
+
 function compareRefs(a: ArtifactRef, b: ArtifactRef): number {
   return (
     catalogOrder(a.type) - catalogOrder(b.type) ||
+    sequenceOf(a.id) - sequenceOf(b.id) ||
     compareBytes(a.id, b.id) ||
     compareBytes(a.path, b.path)
   );

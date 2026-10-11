@@ -18,9 +18,20 @@ afterEach(() => {
 
 const next = (...args: string[]) => runQueryCommand(registerNextCommand, ['next', ...args, '--repo', fx.root]);
 
+const SETTINGS_ENABLED = JSON.stringify({
+  projectManagement: {
+    enabled: true,
+    provider: 'azure-devops',
+    host: 'https://dev.azure.com/acme',
+    workspace: 'acme',
+    project: 'sdd-platform',
+  },
+});
+
 describe('next', () => {
   it('modo humano: el identificador va solo en la primera línea', async () => {
     fx.write('docs/specs/changes/user-stories/US-023-x/README.md');
+    fx.write('docs/specs/archived/user-stories/US-022-y/README.md');
 
     const run = await next('US');
 
@@ -28,55 +39,103 @@ describe('next', () => {
     expect(run.stdout).toBe(
       [
         'US-024',
-        'tipo: US · alcance: GLOBAL · máximo ocupado: US-023',
-        'rutas consultadas: docs/specs/changes/user-stories, docs/specs/archived/user-stories',
+        'ruta destino: docs/specs/changes/user-stories/US-024-<slug>',
+        'hermanos: 2',
+        '  docs/specs/changes/user-stories/US-023-x',
+        '  docs/specs/archived/user-stories/US-022-y',
+        'gestor de proyectos: deshabilitado',
         '',
       ].join('\n'),
     );
   });
 
-  it('modo humano de un WF muestra el padre', async () => {
-    fx.write('docs/specs/archived/user-stories/US-022-equipo/README.md');
-    fx.write('docs/specs/archived/user-stories/US-022-equipo/wireframes/WF-003-team.md');
+  it('modo humano indica cuántos hermanos se muestran cuando hay recorte', async () => {
+    for (const n of ['001', '002', '003']) {
+      fx.write(`docs/specs/changes/user-stories/US-${n}-x/README.md`);
+    }
 
-    const run = await next('WF', '--parent', 'US-022');
+    const run = await next('US', '--limit', '2');
 
-    expect(run.stdout.split('\n').slice(0, 3)).toEqual([
-      'WF-004',
-      'tipo: WF · alcance: PARENT · padre: US-022 · máximo ocupado: WF-003',
-      'rutas consultadas: docs/specs/archived/user-stories/US-022-equipo/wireframes',
+    expect(run.stdout.split('\n').slice(0, 5)).toEqual([
+      'US-004',
+      'ruta destino: docs/specs/changes/user-stories/US-004-<slug>',
+      'hermanos: 3 (se muestran 2, de mayor a menor)',
+      '  docs/specs/changes/user-stories/US-003-x',
+      '  docs/specs/changes/user-stories/US-002-x',
     ]);
   });
 
-  it('lista las entradas no conformes en modo humano', async () => {
-    fx.write('docs/specs/changes/user-stories/US-10-x/README.md');
+  it('modo humano de un WF muestra la ruta destino y sus hermanos', async () => {
+    fx.write('docs/specs/changes/user-stories/US-022-equipo/README.md');
+    fx.write('docs/specs/changes/user-stories/US-022-equipo/wireframes/WF-003-team.md');
+
+    const run = await next('WF', '--parent', 'US-022');
+
+    expect(run.stdout.split('\n').slice(0, 4)).toEqual([
+      'WF-004',
+      'ruta destino: docs/specs/changes/user-stories/US-022-equipo/wireframes/WF-004-<slug>.md',
+      'hermanos: 1',
+      '  docs/specs/changes/user-stories/US-022-equipo/wireframes/WF-003-team.md',
+    ]);
+  });
+
+  it('con el gestor habilitado la primera línea no es un identificador', async () => {
+    fx.write('.sdd-devkit/settings.json', SETTINGS_ENABLED);
+    fx.write('docs/specs/changes/user-stories/US-1847-a/README.md');
 
     const run = await next('US');
 
-    expect(run.stdout).toContain('entradas no conformes: docs/specs/changes/user-stories/US-10-x');
+    expect(run.stdout).toBe(
+      [
+        'id: lo asigna el gestor de proyectos',
+        'ruta destino: docs/specs/changes/user-stories/<id>-<slug>',
+        'hermanos: 1',
+        '  docs/specs/changes/user-stories/US-1847-a',
+        'gestor de proyectos: azure-devops (acme/sdd-platform)',
+        '',
+      ].join('\n'),
+    );
   });
 
-  it('--output json emite la envolvente cli-next/v1 en una línea', async () => {
+  it('--output json emite la envolvente cli-next/v1 con MD-005 en data', async () => {
     fx.write('docs/specs/changes/user-stories/US-001-a/README.md');
 
     const run = await next('us', '--output', 'json');
 
     expect(run.stdout.endsWith('\n')).toBe(true);
+    expect(run.stdout.trimEnd().split('\n')).toHaveLength(1);
     expect(JSON.parse(run.stdout)).toEqual({
       schema: 'cli-next/v1',
       command: 'next',
       ok: true,
       data: {
-        type: 'US',
-        nextId: 'US-002',
-        sequence: 2,
-        highestUsed: 'US-001',
-        scope: 'GLOBAL',
-        parent: null,
-        capability: null,
-        scannedPaths: ['docs/specs/changes/user-stories', 'docs/specs/archived/user-stories'],
-        usedIds: ['US-001'],
-        ignored: [],
+        next: 'US-002',
+        siblings: ['docs/specs/changes/user-stories/US-001-a'],
+        total: 1,
+        truncated: false,
+        targetPath: 'docs/specs/changes/user-stories/US-002-<slug>',
+        projectManagement: { enabled: false },
+      },
+    });
+  });
+
+  it('--output json con el gestor habilitado devuelve next null y los datos de conexión', async () => {
+    fx.write('.sdd-devkit/settings.json', SETTINGS_ENABLED);
+
+    const run = await next('WI', '--output', 'json');
+
+    expect(JSON.parse(run.stdout).data).toEqual({
+      next: null,
+      siblings: [],
+      total: 0,
+      truncated: false,
+      targetPath: 'docs/specs/changes/work-items/<id>-<slug>',
+      projectManagement: {
+        enabled: true,
+        provider: 'azure-devops',
+        host: 'https://dev.azure.com/acme',
+        workspace: 'acme',
+        project: 'sdd-platform',
       },
     });
   });
@@ -97,11 +156,23 @@ describe('next', () => {
     [['WF', '--parent', 'US-999'], 'PARENT_NOT_FOUND'],
     [['MD'], 'MISSING_CAPABILITY'],
     [['MD', '--capability', 'nada'], 'CAPABILITY_NOT_FOUND'],
+    [['US', '--limit', '-1'], 'INVALID_FLAG_VALUE'],
+    [['US', '--limit', 'abc'], 'INVALID_FLAG_VALUE'],
   ])('%j es un ValidationError %s con código 2', async (args, code) => {
     const run = await next(...args);
 
     expect(run.exitCode).toBe(2);
     expect(run.error).toMatchObject({ type: 'ValidationError', exitCode: 2, code });
+    expect(run.stdout).toBe('');
+  });
+
+  it('un padre archivado es ARTIFACT_ARCHIVED con código 2 y no crea nada', async () => {
+    fx.write('docs/specs/archived/user-stories/US-003-c/README.md');
+
+    const run = await next('TK', '--parent', 'US-003');
+
+    expect(run.exitCode).toBe(2);
+    expect(run.error).toMatchObject({ type: 'ValidationError', code: 'ARTIFACT_ARCHIVED' });
     expect(run.stdout).toBe('');
   });
 
