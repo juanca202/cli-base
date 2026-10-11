@@ -15,6 +15,7 @@
   "scripts": {
     "dev": "tsx src/cli.ts",
     "build": "tsc && node --input-type=module -e \"import { chmodSync } from 'node:fs'; chmodSync('dist/cli.js', 0o755);\"",
+    "build:bundle": "node scripts/build-bundle.mjs",
     "start": "node dist/cli.js",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
@@ -33,6 +34,7 @@
     "@types/node": "^26.5.1",
     "@vitest/coverage-v8": "^5.0.0",
     "dependency-cruiser": "^18.2.0",
+    "esbuild": "^0.28.2",
     "eslint": "^10.10.0",
     "execa": "^10.0.1",
     "tsx": "^4.23.13",
