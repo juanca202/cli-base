@@ -26,7 +26,11 @@ describe('parseArtifactId', () => {
     expect(parseArtifactId('tk-001')).toEqual({ type: 'TK', sequence: 1, id: 'TK-001' });
   });
 
-  it.each(['US-10', 'US-0100', 'US010', '010', 'US-', 'US-abc', ''])(
+  it('acepta un secuencial de más de 3 dígitos (mínimo 3, sin máximo)', () => {
+    expect(parseArtifactId('US-1043')).toEqual({ type: 'US', sequence: 1043, id: 'US-1043' });
+  });
+
+  it.each(['US-10', 'US010', '010', 'US-', 'US-abc', ''])(
     'rechaza %j como MALFORMED_ID',
     (input) => {
       expect(() => parseArtifactId(input)).toThrowError(

@@ -166,7 +166,7 @@ function sweepEntries(
       const slugSource =
         descriptor.kind === 'file' ? entry.name.replace(/\.md$/, '') : entry.name;
       artifacts.push({
-        id: `${descriptor.type}-${sequence}`,
+        id: `${descriptor.type}-${String(Number(sequence)).padStart(3, '0')}`,
         type: descriptor.type,
         slug: slugSource.slice(`${descriptor.type}-${sequence}-`.length),
         kind: descriptor.kind,

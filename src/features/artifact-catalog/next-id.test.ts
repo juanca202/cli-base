@@ -44,6 +44,14 @@ afterEach(() => {
   rmSync(root, { recursive: true, force: true });
 });
 
+const ENABLED = {
+  enabled: true,
+  provider: 'azure-devops',
+  host: 'https://dev.azure.com/acme',
+  workspace: 'acme',
+  project: 'sdd-platform',
+} as const;
+
 describe('nextId — alcance GLOBAL', () => {
   it('toma el máximo de la unión de activos y archivados', async () => {
     for (const name of ['US-001-a', 'US-002-b', 'US-004-d']) {
@@ -55,44 +63,62 @@ describe('nextId — alcance GLOBAL', () => {
 
     const result = await run({ type: 'US' });
 
-    expect(result).toMatchObject({
-      type: 'US',
-      nextId: 'US-008',
-      sequence: 8,
-      highestUsed: 'US-007',
-      scope: 'GLOBAL',
-      parent: null,
-      capability: null,
-      scannedPaths: ['docs/specs/changes/user-stories', 'docs/specs/archived/user-stories'],
-      usedIds: ['US-001', 'US-002', 'US-003', 'US-004', 'US-007'],
-      ignored: [],
+    expect(result).toEqual({
+      next: 'US-008',
+      siblings: [
+        'docs/specs/archived/user-stories/US-007-g',
+        'docs/specs/changes/user-stories/US-004-d',
+        'docs/specs/archived/user-stories/US-003-c',
+        'docs/specs/changes/user-stories/US-002-b',
+        'docs/specs/changes/user-stories/US-001-a',
+      ],
+      total: 5,
+      truncated: false,
+      targetPath: 'docs/specs/changes/user-stories/US-008-<slug>',
+      projectManagement: { enabled: false },
     });
   });
 
-  it('sin artefactos devuelve <T>-001 y lista las rutas inexistentes', async () => {
+  it('sin artefactos devuelve <T>-001, sin hermanos y con la ruta destino', async () => {
     const result = await run({ type: 'US' });
 
     expect(result).toMatchObject({
-      nextId: 'US-001',
-      sequence: 1,
-      highestUsed: null,
-      usedIds: [],
-      scannedPaths: ['docs/specs/changes/user-stories', 'docs/specs/archived/user-stories'],
+      next: 'US-001',
+      siblings: [],
+      total: 0,
+      truncated: false,
+      targetPath: 'docs/specs/changes/user-stories/US-001-<slug>',
     });
   });
 
-  it('no rellena huecos y cuenta una vez el secuencial repetido', async () => {
+  it('no rellena huecos y lista ambas rutas de un secuencial repetido', async () => {
     touch('docs/specs/changes/user-stories/US-001-a/README.md');
     touch('docs/specs/changes/user-stories/US-004-d/README.md');
-    touch('docs/specs/archived/user-stories/US-004-d/README.md');
+    touch('docs/specs/archived/user-stories/US-004-d-anterior/README.md');
 
     const result = await run({ type: 'US' });
 
-    expect(result.nextId).toBe('US-005');
-    expect(result.usedIds).toEqual(['US-001', 'US-004']);
+    expect(result.next).toBe('US-005');
+    expect(result.siblings).toEqual([
+      'docs/specs/archived/user-stories/US-004-d-anterior',
+      'docs/specs/changes/user-stories/US-004-d',
+      'docs/specs/changes/user-stories/US-001-a',
+    ]);
+    expect(result.total).toBe(3);
   });
 
-  it('reporta en ignored los nombres no conformes sin subir el máximo', async () => {
+  it('el secuencial tiene mínimo 3 dígitos y admite más', async () => {
+    touch('docs/specs/changes/user-stories/US-999-a/README.md');
+    expect((await run({ type: 'US' })).next).toBe('US-1000');
+
+    touch('docs/specs/changes/user-stories/US-1042-b/README.md');
+    const result = await run({ type: 'US' });
+    expect(result.next).toBe('US-1043');
+    expect(result.targetPath).toBe('docs/specs/changes/user-stories/US-1043-<slug>');
+    expect(result.siblings[0]).toBe('docs/specs/changes/user-stories/US-1042-b');
+  });
+
+  it('las entradas no conformes no cuentan ni aparecen ni suben el máximo', async () => {
     touch('docs/specs/changes/user-stories/US-002-z/README.md');
     touch('docs/specs/changes/user-stories/US-10-x/README.md');
     touch('docs/specs/changes/user-stories/us-011-y/README.md');
@@ -100,13 +126,9 @@ describe('nextId — alcance GLOBAL', () => {
 
     const result = await run({ type: 'US' });
 
-    expect(result.nextId).toBe('US-003');
-    expect(result.usedIds).toEqual(['US-002']);
-    expect(result.ignored).toEqual([
-      'docs/specs/changes/user-stories/US-012',
-      'docs/specs/changes/user-stories/US-10-x',
-      'docs/specs/changes/user-stories/us-011-y',
-    ]);
+    expect(result.next).toBe('US-003');
+    expect(result.siblings).toEqual(['docs/specs/changes/user-stories/US-002-z']);
+    expect(result.total).toBe(1);
   });
 
   it('SRS y RQ comparten carpeta sin invadirse', async () => {
@@ -116,8 +138,14 @@ describe('nextId — alcance GLOBAL', () => {
     const srs = await run({ type: 'SRS' });
     const rq = await run({ type: 'RQ' });
 
-    expect(srs).toMatchObject({ nextId: 'SRS-002', usedIds: ['SRS-001'], ignored: [] });
-    expect(rq).toMatchObject({ nextId: 'RQ-006', usedIds: ['RQ-005'], ignored: [] });
+    expect(srs).toMatchObject({
+      next: 'SRS-002',
+      siblings: ['docs/specs/changes/requirements/SRS-001-plataforma'],
+    });
+    expect(rq).toMatchObject({
+      next: 'RQ-006',
+      siblings: ['docs/specs/changes/requirements/RQ-005-importacion'],
+    });
   });
 
   it('FT se numera solo sobre la ruta de features', async () => {
@@ -125,22 +153,28 @@ describe('nextId — alcance GLOBAL', () => {
 
     const result = await run({ type: 'FT' });
 
-    expect(result.nextId).toBe('FT-004');
-    expect(result.scannedPaths).toEqual(['docs/specs/current']);
+    expect(result).toMatchObject({
+      next: 'FT-004',
+      siblings: ['docs/specs/current/FT-003-x'],
+      targetPath: 'docs/specs/current/FT-004-<slug>',
+    });
   });
 
-  it('ADR se numera sobre la raíz de arquitectura', async () => {
+  it('ADR se numera sobre la raíz de arquitectura y su ruta destino es un .md', async () => {
     touch('docs/adr/ADR-002-x.md');
 
     const result = await run({ type: 'ADR' });
 
-    expect(result).toMatchObject({ nextId: 'ADR-003', scope: 'ARCHITECTURE_ROOT' });
-    expect(result.scannedPaths).toEqual(['docs/adr']);
+    expect(result).toMatchObject({
+      next: 'ADR-003',
+      siblings: ['docs/adr/ADR-002-x.md'],
+      targetPath: 'docs/adr/ADR-003-<slug>.md',
+    });
   });
 
   it('normaliza la capitalización del tipo', async () => {
     const result = await run({ type: 'us' });
-    expect(result.type).toBe('US');
+    expect(result.next).toBe('US-001');
   });
 
   it('rechaza un tipo fuera del catálogo con UNKNOWN_ARTIFACT_TYPE', async () => {
@@ -150,26 +184,125 @@ describe('nextId — alcance GLOBAL', () => {
   });
 });
 
+describe('nextId — siblings y --limit', () => {
+  beforeEach(() => {
+    for (const name of ['US-001-a', 'US-002-b', 'US-004-d']) {
+      touch(`docs/specs/changes/user-stories/${name}/README.md`);
+    }
+    touch('docs/specs/archived/user-stories/US-003-c/README.md');
+  });
+
+  it('recorta a --limit conservando el total y marca truncated', async () => {
+    const result = await run({ type: 'US', limit: 2 });
+
+    expect(result.next).toBe('US-005');
+    expect(result.siblings).toEqual([
+      'docs/specs/changes/user-stories/US-004-d',
+      'docs/specs/archived/user-stories/US-003-c',
+    ]);
+    expect(result.total).toBe(4);
+    expect(result.truncated).toBe(true);
+  });
+
+  it('--limit 0 devuelve siblings vacío con el total intacto', async () => {
+    const result = await run({ type: 'US', limit: 0 });
+
+    expect(result).toMatchObject({ next: 'US-005', siblings: [], total: 4, truncated: true });
+  });
+
+  it('por defecto el límite es 50', async () => {
+    for (let n = 5; n <= 60; n += 1) {
+      touch(`docs/specs/changes/user-stories/US-${String(n).padStart(3, '0')}-x/README.md`);
+    }
+
+    const result = await run({ type: 'US' });
+
+    expect(result.siblings).toHaveLength(50);
+    expect(result.total).toBe(60);
+    expect(result.truncated).toBe(true);
+  });
+
+  it.each([-1, 1.5, Number.NaN])('rechaza --limit %s con INVALID_FLAG_VALUE', async (limit) => {
+    const error = await failure({ type: 'US', limit });
+    expect(error.code).toBe('INVALID_FLAG_VALUE');
+  });
+});
+
+describe('nextId — gestor de proyectos', () => {
+  beforeEach(() => {
+    touch('docs/specs/changes/user-stories/US-1847-a/README.md');
+    touch('docs/specs/changes/user-stories/US-1847-a/test-cases/TC-1900-x.md');
+    touch('docs/specs/changes/work-items/WI-210-y/README.md');
+    touch('docs/specs/changes/requirements/SRS-001-plataforma/README.md');
+  });
+
+  it.each([
+    ['US', undefined, 'docs/specs/changes/user-stories/<id>-<slug>'],
+    ['WI', undefined, 'docs/specs/changes/work-items/<id>-<slug>'],
+    ['TC', 'US-1847', 'docs/specs/changes/user-stories/US-1847-a/test-cases/<id>-<slug>.md'],
+  ] as const)('%s habilitado: next es null y la ruta lleva <id>', async (type, parent, targetPath) => {
+    const query: NextIdQuery =
+      parent === undefined
+        ? { type, projectManagement: ENABLED }
+        : { type, parent, projectManagement: ENABLED };
+
+    const result = await run(query);
+
+    expect(result.next).toBeNull();
+    expect(result.targetPath).toBe(targetPath);
+    expect(result.projectManagement).toEqual(ENABLED);
+    expect(result.total).toBe(1);
+  });
+
+  it('los demás tipos conservan el secuencial local', async () => {
+    const result = await run({ type: 'SRS', projectManagement: ENABLED });
+
+    expect(result.next).toBe('SRS-002');
+    expect(result.projectManagement).toEqual(ENABLED);
+  });
+
+  it('deshabilitado calcula el secuencial local de US', async () => {
+    const result = await run({ type: 'US', projectManagement: { enabled: false } });
+
+    expect(result.next).toBe('US-1848');
+  });
+});
+
 describe('nextId — alcance PARENT', () => {
-  it('numera un TK dentro de la carpeta archivada de su historia', async () => {
+  it('rechaza un padre archivado con ARTIFACT_ARCHIVED en TK y WF', async () => {
     touch('docs/specs/archived/user-stories/US-003-c/README.md');
     touch('docs/specs/archived/user-stories/US-003-c/TK-001-a.md');
-    touch('docs/specs/archived/user-stories/US-003-c/TK-002-b.md');
-    touch('docs/specs/archived/user-stories/US-003-c/test-cases/TC-001-x.md');
+    touch('docs/specs/archived/user-stories/US-003-c/wireframes/WF-001-x.md');
 
-    const result = await run({ type: 'TK', parent: 'US-003' });
+    for (const type of ['TK', 'WF'] as const) {
+      const error = await failure({ type, parent: 'US-003' });
+      expect(error.code).toBe('ARTIFACT_ARCHIVED');
+      expect(error.details).toEqual({ type, parent: 'US-003' });
+    }
+  });
+
+  it('numera un TK bajo una historia activa y no cuenta los de otra', async () => {
+    touch('docs/specs/changes/user-stories/US-004-d/README.md');
+    touch('docs/specs/changes/user-stories/US-004-d/TK-005-otra.md');
+    touch('docs/specs/changes/user-stories/US-001-a/README.md');
+    touch('docs/specs/changes/user-stories/US-001-a/TK-001-a.md');
+    touch('docs/specs/changes/user-stories/US-001-a/TK-002-b.md');
+    touch('docs/specs/changes/user-stories/US-001-a/test-cases/TC-001-x.md');
+
+    const result = await run({ type: 'TK', parent: 'US-001' });
 
     expect(result).toMatchObject({
-      nextId: 'TK-003',
-      scope: 'PARENT',
-      parent: { id: 'US-003', type: 'US', path: 'docs/specs/archived/user-stories/US-003-c' },
-      scannedPaths: ['docs/specs/archived/user-stories/US-003-c'],
-      usedIds: ['TK-001', 'TK-002'],
-      ignored: [],
+      next: 'TK-003',
+      siblings: [
+        'docs/specs/changes/user-stories/US-001-a/TK-002-b.md',
+        'docs/specs/changes/user-stories/US-001-a/TK-001-a.md',
+      ],
+      total: 2,
+      targetPath: 'docs/specs/changes/user-stories/US-001-a/TK-003-<slug>.md',
     });
   });
 
-  it('en una carpeta compartida solo reporta como no conforme lo que lleva el prefijo del tipo', async () => {
+  it('en una carpeta compartida las entradas no conformes no cuentan', async () => {
     touch('docs/specs/changes/user-stories/US-001-a/README.md');
     touch('docs/specs/changes/user-stories/US-001-a/TK-001-a.md');
     touch('docs/specs/changes/user-stories/US-001-a/TK-2-mal.md');
@@ -177,12 +310,12 @@ describe('nextId — alcance PARENT', () => {
 
     const result = await run({ type: 'TK', parent: 'US-001' });
 
-    expect(result.nextId).toBe('TK-002');
-    expect(result.ignored).toEqual(['docs/specs/changes/user-stories/US-001-a/TK-2-mal.md']);
+    expect(result.next).toBe('TK-002');
+    expect(result.siblings).toEqual(['docs/specs/changes/user-stories/US-001-a/TK-001-a.md']);
   });
 
-  it('WF numera dentro de wireframes/ del padre e ignora los SVG', async () => {
-    touch('docs/specs/archived/user-stories/US-022-equipo/README.md');
+  it('WF numera dentro de wireframes/ del padre activo y no cuenta los SVG', async () => {
+    touch('docs/specs/changes/user-stories/US-022-equipo/README.md');
     for (const name of [
       'WF-001-lista.md',
       'WF-001-lista.svg',
@@ -190,35 +323,36 @@ describe('nextId — alcance PARENT', () => {
       'WF-003-team.svg',
       'WF-003-team-miembro.svg',
     ]) {
-      touch(`docs/specs/archived/user-stories/US-022-equipo/wireframes/${name}`);
+      touch(`docs/specs/changes/user-stories/US-022-equipo/wireframes/${name}`);
     }
 
     const byId = await run({ type: 'WF', parent: 'US-022' });
     const byPath = await run({
       type: 'WF',
-      parent: 'docs/specs/archived/user-stories/US-022-equipo',
+      parent: 'docs/specs/changes/user-stories/US-022-equipo',
     });
 
     expect(byId).toMatchObject({
-      nextId: 'WF-004',
-      highestUsed: 'WF-003',
-      scope: 'PARENT',
-      scannedPaths: ['docs/specs/archived/user-stories/US-022-equipo/wireframes'],
-      usedIds: ['WF-001', 'WF-003'],
-      ignored: [],
+      next: 'WF-004',
+      siblings: [
+        'docs/specs/changes/user-stories/US-022-equipo/wireframes/WF-003-team.md',
+        'docs/specs/changes/user-stories/US-022-equipo/wireframes/WF-001-lista.md',
+      ],
+      total: 2,
+      targetPath: 'docs/specs/changes/user-stories/US-022-equipo/wireframes/WF-004-<slug>.md',
     });
     expect(byPath).toEqual(byId);
   });
 
-  it('WF mal nombrado (.md) dentro de wireframes/ va a ignored', async () => {
+  it('WF mal nombrado (.md) dentro de wireframes/ no cuenta', async () => {
     touch('docs/specs/changes/user-stories/US-001-a/README.md');
     touch('docs/specs/changes/user-stories/US-001-a/wireframes/WF-001-ok.md');
     touch('docs/specs/changes/user-stories/US-001-a/wireframes/wf-002-mal.md');
 
     const result = await run({ type: 'WF', parent: 'US-001' });
 
-    expect(result.nextId).toBe('WF-002');
-    expect(result.ignored).toEqual(['docs/specs/changes/user-stories/US-001-a/wireframes/wf-002-mal.md']);
+    expect(result.next).toBe('WF-002');
+    expect(result.total).toBe(1);
   });
 
   it('WF con wireframes/ inexistente devuelve WF-001 sin crear carpetas', async () => {
@@ -226,7 +360,7 @@ describe('nextId — alcance PARENT', () => {
 
     const result = await run({ type: 'WF', parent: 'US-030' });
 
-    expect(result).toMatchObject({ nextId: 'WF-001', highestUsed: null, usedIds: [] });
+    expect(result).toMatchObject({ next: 'WF-001', siblings: [], total: 0, truncated: false });
     expect(() => mkdirSync(join(root, 'docs/specs/changes/user-stories/US-030-nueva/wireframes'))).not.toThrow();
   });
 
@@ -263,8 +397,12 @@ describe('nextId — alcance PARENT', () => {
     const nested = await run({ type: 'RS', parent: 'US-001' });
     const loose = await run({ type: 'RS' });
 
-    expect(nested).toMatchObject({ nextId: 'RS-002', scope: 'PARENT' });
-    expect(loose).toMatchObject({ nextId: 'RS-006', usedIds: ['RS-004', 'RS-005'] });
+    expect(nested).toMatchObject({ next: 'RS-002' });
+    expect(loose).toMatchObject({
+      next: 'RS-006',
+      siblings: ['docs/specs/archived/research/RS-005-z', 'docs/specs/changes/research/RS-004-y'],
+      targetPath: 'docs/specs/changes/research/RS-006-<slug>',
+    });
   });
 
   it('rechaza --parent en un tipo que no es de alcance PARENT', async () => {
@@ -283,17 +421,16 @@ describe('nextId — alcance CAPABILITY', () => {
     const result = await run({ type: 'MD', capability: 'cli' });
 
     expect(result).toMatchObject({
-      nextId: 'MD-004',
-      scope: 'CAPABILITY',
-      capability: 'cli',
-      scannedPaths: ['docs/architecture/cli/models'],
+      next: 'MD-004',
+      siblings: ['docs/architecture/cli/models/MD-003-c.md', 'docs/architecture/cli/models/MD-001-a.md'],
+      targetPath: 'docs/architecture/cli/models/MD-004-<slug>.md',
     });
   });
 
   it('API se numera como archivos de apis/', async () => {
     touch('docs/architecture/cli/apis/API-007-x.md');
     const result = await run({ type: 'API', capability: 'cli' });
-    expect(result.nextId).toBe('API-008');
+    expect(result.next).toBe('API-008');
   });
 
   it('sin --capability es MISSING_CAPABILITY; inexistente es CAPABILITY_NOT_FOUND', async () => {

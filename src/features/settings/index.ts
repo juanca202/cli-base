@@ -7,6 +7,7 @@ export {
   DEFAULT_WORKTREE_PATH,
   normalizeBasePath,
   resolveSettings,
+  type ProjectManagementSettings,
   type ResolvedSettings,
   type SettingsPorts,
   type SettingsRequest,

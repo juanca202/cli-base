@@ -3,18 +3,22 @@ import { formatArtifactId, normalizeArtifactType } from './artifact-id.js';
 import {
   ARTIFACT_CATALOG,
   getDescriptor,
-  type ArtifactScope,
   type ArtifactType,
   type ArtifactTypeDescriptor,
 } from './catalog.js';
 import {
   foldersFor,
+  joinPosix,
   sweepFolder,
-  type ArtifactParentRef,
   type ArtifactRef,
   type BasePaths,
 } from './inventory.js';
 import { resolveCapability, resolveParent, type LocateContext } from './locate.js';
+
+/** Estado del gestor de proyectos tal como lo declara `settings.json` (sin credenciales). */
+export type NextProjectManagement =
+  | { enabled: false }
+  | { enabled: true; provider: string; host: string; workspace: string; project: string };
 
 export type NextIdQuery = {
   /** Tipo tal como llegó; se normaliza a mayúsculas. */
@@ -23,20 +27,30 @@ export type NextIdQuery = {
   parent?: string;
   /** Capability de `docs/architecture/` (alcance `CAPABILITY`). */
   capability?: string;
+  /** Máximo de rutas en `siblings`; por defecto {@link DEFAULT_SIBLINGS_LIMIT}. */
+  limit?: number;
+  /** Integración con el gestor de proyectos; por defecto deshabilitada. */
+  projectManagement?: NextProjectManagement;
 };
 
-/** Siguiente identificador libre y la evidencia del cálculo (MD-005). */
+/** Máximo de hermanos devueltos cuando no se indica `--limit`. */
+export const DEFAULT_SIBLINGS_LIMIT = 50;
+
+/**
+ * Tipos cuyo identificador asigna el gestor de proyectos cuando la integración
+ * está habilitada: `next` no los calcula.
+ */
+const PROJECT_MANAGED_TYPES: readonly ArtifactType[] = ['US', 'WI', 'TC'];
+
+/** Siguiente identificador libre, sus hermanos y la ruta destino (MD-005). */
 export type NextIdResult = {
-  type: ArtifactType;
-  nextId: string;
-  sequence: number;
-  highestUsed: string | null;
-  scope: ArtifactScope;
-  parent: ArtifactParentRef | null;
-  capability: string | null;
-  scannedPaths: string[];
-  usedIds: string[];
-  ignored: string[];
+  /** `null` cuando el gestor de proyectos asigna el identificador (`US`, `WI`, `TC`). */
+  next: string | null;
+  siblings: string[];
+  total: number;
+  truncated: boolean;
+  targetPath: string;
+  projectManagement: NextProjectManagement;
 };
 
 function compareBytes(a: string, b: string): number {
@@ -91,6 +105,13 @@ export async function nextId(
   const descriptor = getDescriptor(type);
   const usesParent = descriptor.scope === 'PARENT';
   const usesCapability = descriptor.scope === 'CAPABILITY';
+  const limit = query.limit ?? DEFAULT_SIBLINGS_LIMIT;
+  if (!Number.isInteger(limit) || limit < 0) {
+    throw new ValidationError(`--limit debe ser un entero ≥ 0 (recibido: ${String(query.limit)}).`, {
+      code: ERROR_CODES.INVALID_FLAG_VALUE,
+      details: { flag: '--limit' },
+    });
+  }
 
   if (query.parent !== undefined && !usesParent) throw notApplicable(descriptor, '--parent');
   if (query.capability !== undefined && !usesCapability) {
@@ -106,6 +127,15 @@ export async function nextId(
   let parent: ArtifactRef | null = null;
   if (usesParent && query.parent !== undefined) {
     parent = resolveParent(context, query.parent, descriptor.parentTypes);
+    if (parent.state === 'ARCHIVED') {
+      throw new ValidationError(
+        `El padre ${parent.id} está archivado: no se crea nada sobre un artefacto archivado; desarchívalo primero.`,
+        {
+          code: ERROR_CODES.ARTIFACT_ARCHIVED,
+          details: { type: descriptor.type, parent: parent.id },
+        },
+      );
+    }
   }
   let capability: string | null = null;
   if (usesCapability && query.capability !== undefined) {
@@ -117,31 +147,30 @@ export async function nextId(
   const folders = foldersFor(descriptor, base, folderOptions);
   const mates = folderMates(descriptor);
 
-  const used = new Map<string, number>();
-  const ignored = new Set<string>();
+  const siblings: { path: string; sequence: number }[] = [];
   for (const folder of folders) {
     const swept = await sweepFolder(context.fs, folder, mates, parent);
     for (const artifact of swept.artifacts) {
       if (artifact.type !== type) continue;
-      used.set(artifact.id, Number(artifact.id.slice(type.length + 1)));
+      siblings.push({ path: artifact.path, sequence: Number(artifact.id.slice(type.length + 1)) });
     }
-    for (const entry of swept.ignored) ignored.add(entry.path);
   }
+  siblings.sort((a, b) => b.sequence - a.sequence || compareBytes(a.path, b.path));
 
-  const usedIds = [...used.entries()].sort((a, b) => a[1] - b[1] || compareBytes(a[0], b[0]));
-  const highest = usedIds[usedIds.length - 1];
-  const sequence = (highest?.[1] ?? 0) + 1;
+  const projectManagement: NextProjectManagement = query.projectManagement ?? { enabled: false };
+  const assignedByManager = projectManagement.enabled && PROJECT_MANAGED_TYPES.includes(type);
+  const highest = siblings[0]?.sequence ?? 0;
+  const next = assignedByManager ? null : formatArtifactId(type, highest + 1);
+
+  const activeFolder = folders[0]?.path ?? '';
+  const fileName = `${next ?? '<id>'}-<slug>${descriptor.kind === 'file' ? '.md' : ''}`;
 
   return {
-    type,
-    nextId: formatArtifactId(type, sequence),
-    sequence,
-    highestUsed: highest?.[0] ?? null,
-    scope: descriptor.scope,
-    parent: parent === null ? null : { id: parent.id, type: parent.type, path: parent.path },
-    capability,
-    scannedPaths: folders.map((folder) => folder.path),
-    usedIds: usedIds.map(([id]) => id),
-    ignored: [...ignored].sort(compareBytes),
+    next,
+    siblings: siblings.slice(0, limit).map((sibling) => sibling.path),
+    total: siblings.length,
+    truncated: siblings.length > limit,
+    targetPath: joinPosix(activeFolder, fileName),
+    projectManagement,
   };
 }
