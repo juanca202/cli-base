@@ -60,7 +60,7 @@ cli next US --limit 10               # máximo de hermanos a mostrar (por defect
 `projectManagement`, `branch`, `language`, `testCases`); `--output human` es `INVALID_OUTPUT_FORMAT`. Un fallo sí
 es `cli-error/v1`, en el mismo formato. `branch` es la rama actual del repositorio de especificaciones (`null` con
 HEAD desacoplado), `language` el `language` de `settings.json` (`null` si no está) y `testCases` la política
-`specification.testCases` (`ask`/`ask` por defecto). El secuencial tiene mínimo 3 dígitos y puede tener más
+`specification.testCases` (`ask`/`ask` por defecto; solo en `US` y `WI`, `null` en los demás tipos). El secuencial tiene mínimo 3 dígitos y puede tener más
 (`US-1043`). Con `projectManagement` habilitado en `settings.json`, el id de `US`, `WI` y `TC`
 lo asigna el gestor: `next` devuelve `next: null` y `<id>` en la ruta destino. Un `--parent` archivado falla con
 `ARTIFACT_ARCHIVED` (no se crea nada sobre un artefacto archivado). Los nombres fuera de patrón no aparecen en
