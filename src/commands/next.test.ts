@@ -159,6 +159,19 @@ describe('next', () => {
     });
   });
 
+  it('testCases solo aplica a US y WI: en los demás tipos es null', async () => {
+    fx.write('docs/specs/changes/user-stories/US-001-a/README.md');
+
+    for (const args of [['US'], ['WI']]) {
+      const run = await next(...args, '--output', 'json');
+      expect(JSON.parse(run.stdout).testCases).toEqual({ createMode: 'ask', createDetailsMode: 'ask' });
+    }
+    for (const args of [['SRS'], ['TK', '--parent', 'US-001'], ['FT'], ['TC', '--parent', 'US-001']]) {
+      const run = await next(...args, '--output', 'json');
+      expect(JSON.parse(run.stdout)).toMatchObject({ testCases: null });
+    }
+  });
+
   it('lee language y la política de casos de prueba de settings.json', async () => {
     fx.write(
       '.sdd-devkit/settings.json',

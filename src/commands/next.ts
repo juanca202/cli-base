@@ -4,6 +4,9 @@ import { openRepository, parseCount } from '../command-context.js';
 import { nextId, type NextIdQuery } from '../features/artifact-catalog/index.js';
 import { resolveOutputFormat, writePayload } from '../output.js';
 
+/** Tipos de artefacto para los que `settings.json` define una política de casos de prueba. */
+const TEST_CASE_TYPES: readonly string[] = ['US', 'WI'];
+
 function optionText(value: unknown): string | undefined {
   return typeof value === 'string' ? value : undefined;
 }
@@ -28,6 +31,8 @@ export function registerNextCommand(program: Command): void {
       if (capability !== undefined) query.capability = capability;
 
       const result = await nextId(locate, base, query);
-      writePayload({ ...result, ...environment }, resolveOutputFormat(globals.output));
+      // La política de casos de prueba solo aplica a los tipos que los definen: `US` y `WI`.
+      const testCases = TEST_CASE_TYPES.includes(type.toUpperCase()) ? environment.testCases : null;
+      writePayload({ ...result, ...environment, testCases }, resolveOutputFormat(globals.output));
     });
 }
