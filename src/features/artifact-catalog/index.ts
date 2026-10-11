@@ -35,11 +35,14 @@ export {
 } from './inventory.js';
 export {
   locateById,
+  parseStateFilter,
   resolveCapability,
   resolveParent,
   type LocateContext,
   type LocateQuery,
 } from './locate.js';
+export { nextId, type NextIdQuery, type NextIdResult } from './next-id.js';
+export { listArtifacts, type ListQuery, type ListResult } from './list.js';
 export { lineAt, maskCode, readHtmlComments, type HtmlComment } from './markdown.js';
 export {
   attachStatus,

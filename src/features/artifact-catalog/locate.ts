@@ -11,10 +11,29 @@ import {
   type InventoryFilter,
 } from './inventory.js';
 
+export const STATE_FILTERS = ['active', 'archived', 'all'] as const;
+
+/**
+ * Valida el filtro `--state` (sensible a mayúsculas; por defecto `all`):
+ * cualquier otro valor es `INVALID_FLAG_VALUE`, nunca un filtro ignorado.
+ */
+export function parseStateFilter(value: string | undefined): NonNullable<InventoryFilter['state']> {
+  if (value === undefined) return 'all';
+  const state = STATE_FILTERS.find((candidate) => candidate === value);
+  if (state === undefined) {
+    throw new ValidationError(
+      `--state debe ser ${STATE_FILTERS.join(', ')}; recibido: ${value}.`,
+      { code: ERROR_CODES.INVALID_FLAG_VALUE, details: { flag: '--state', value } },
+    );
+  }
+  return state;
+}
+
 export type LocateQuery = {
   /** Identificador a localizar; el prefijo determina el tipo. */
   id: string;
-  state?: InventoryFilter['state'];
+  /** Sin validar: `locateById` lo comprueba con `parseStateFilter`. */
+  state?: string;
   /** Id o ruta del artefacto padre. */
   parent?: string;
   capability?: string;
@@ -101,8 +120,7 @@ export async function locateById(
   query: LocateQuery,
 ): Promise<ArtifactRef[]> {
   const parsed = parseArtifactId(query.id);
-  const filter: InventoryFilter = { types: [parsed.type] };
-  if (query.state !== undefined) filter.state = query.state;
+  const filter: InventoryFilter = { types: [parsed.type], state: parseStateFilter(query.state) };
   if (query.parent !== undefined) {
     // Cualquier tipo de padre: la restricción es la carpeta del artefacto indicado.
     const parent = resolveParent(context, query.parent, [

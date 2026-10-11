@@ -187,6 +187,21 @@ function sweepEntries(
   return { artifacts, ignored };
 }
 
+/**
+ * Barre una sola carpeta: clasifica sus entradas con los `namePattern` de
+ * `types` (conformes → `artifacts`, no conformes → `ignored`). Una carpeta
+ * inexistente aporta cero entradas. Lo usa `next` para su cálculo acotado.
+ */
+export async function sweepFolder(
+  fs: RepositoryFileSystem,
+  folder: FolderSpec,
+  types: ArtifactTypeDescriptor[],
+  parent: ArtifactRef | null,
+): Promise<{ artifacts: ArtifactRef[]; ignored: IgnoredEntry[] }> {
+  const shared = types.some((d) => SHARED_PARENT_FOLDER_TYPES.includes(d.type));
+  return sweep(fs, { folder, types, parent, shared });
+}
+
 async function sweep(
   fs: RepositoryFileSystem,
   request: SweepRequest,
