@@ -1,6 +1,9 @@
 import { Command } from 'commander';
 import { registerGlobalOptions } from './cli-options.js';
+import { registerFindCommand } from './commands/find.js';
 import { registerHelloCommand } from './commands/hello.js';
+import { registerListCommand } from './commands/list.js';
+import { registerNextCommand } from './commands/next.js';
 import { ERROR_CODES, ValidationError } from './errors.js';
 
 export type ProgramHooks = {
@@ -31,6 +34,9 @@ export function createProgram(hooks: ProgramHooks = {}): Command {
     hooks.onCommandResolved?.(actionCommand.name());
   });
 
+  registerNextCommand(program);
+  registerFindCommand(program);
+  registerListCommand(program);
   registerHelloCommand(program);
 
   return program;
