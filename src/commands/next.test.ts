@@ -159,7 +159,7 @@ describe('next', () => {
     });
   });
 
-  it('testCases solo aplica a US y WI: en los demás tipos es null', async () => {
+  it('testCases solo aplica a US y WI: en los demás tipos se omite', async () => {
     fx.write('docs/specs/changes/user-stories/US-001-a/README.md');
 
     for (const args of [['US'], ['WI']]) {
@@ -168,7 +168,10 @@ describe('next', () => {
     }
     for (const args of [['SRS'], ['TK', '--parent', 'US-001'], ['FT'], ['TC', '--parent', 'US-001']]) {
       const run = await next(...args, '--output', 'json');
-      expect(JSON.parse(run.stdout)).toMatchObject({ testCases: null });
+      const body = JSON.parse(run.stdout);
+      expect(body).not.toHaveProperty('testCases');
+      expect(body).toHaveProperty('branch');
+      expect(run.stdout).not.toContain('testCases');
     }
   });
 
