@@ -16,6 +16,7 @@
     "dev": "tsx src/cli.ts",
     "build": "tsc && node --input-type=module -e \"import { chmodSync } from 'node:fs'; chmodSync('dist/cli.js', 0o755);\"",
     "build:bundle": "node scripts/build-bundle.mjs",
+    "build:cli": "npm run build:bundle && mkdir -p ../plugin/scripts && cp dist/sdd-devkit.mjs ../plugin/scripts/sdd-devkit.mjs",
     "start": "node dist/cli.js",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
