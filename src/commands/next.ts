@@ -18,7 +18,7 @@ export function registerNextCommand(program: Command): void {
     .option('--limit <n>', 'máximo de hermanos a mostrar (por defecto 50)')
     .action(async (type: string, opts: Record<string, unknown>, command: Command) => {
       const globals = readGlobalOptions(command);
-      const { locate, base, projectManagement } = await openRepository(globals);
+      const { locate, base, projectManagement, environment } = await openRepository(globals);
       const query: NextIdQuery = { type, projectManagement };
       const limit = parseCount(optionText(opts['limit']));
       if (limit !== undefined) query.limit = limit;
@@ -28,6 +28,6 @@ export function registerNextCommand(program: Command): void {
       if (capability !== undefined) query.capability = capability;
 
       const result = await nextId(locate, base, query);
-      writePayload(result, resolveOutputFormat(globals.output));
+      writePayload({ ...result, ...environment }, resolveOutputFormat(globals.output));
     });
 }

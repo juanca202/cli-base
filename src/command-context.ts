@@ -4,7 +4,11 @@ import {
   type BasePaths,
   type LocateContext,
 } from './features/artifact-catalog/index.js';
-import { resolveSettings, type ProjectManagementSettings } from './features/settings/index.js';
+import {
+  resolveSettings,
+  type ProjectManagementSettings,
+  type TestCasesPolicy,
+} from './features/settings/index.js';
 import type { GlobalOptions } from './cli-options.js';
 
 export type RepositoryContext = {
@@ -13,6 +17,8 @@ export type RepositoryContext = {
   base: BasePaths;
   /** Integración con el gestor de proyectos declarada en `settings.json`. */
   projectManagement: ProjectManagementSettings;
+  /** Contexto de ejecución que `next` devuelve junto al identificador. */
+  environment: { branch: string | null; language: string | null; testCases: TestCasesPolicy };
 };
 
 /**
@@ -41,6 +47,11 @@ export async function openRepository(options: GlobalOptions): Promise<Repository
     locate: { fs, repoRoot: settings.repoRoot, artifacts },
     base,
     projectManagement: settings.projectManagement,
+    environment: {
+      branch: settings.branch,
+      language: settings.language,
+      testCases: settings.testCases,
+    },
   };
 }
 

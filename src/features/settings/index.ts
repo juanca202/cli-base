@@ -4,6 +4,7 @@ export {
   DEFAULT_ARCH_ROOT,
   DEFAULT_CHANGES_PATH,
   DEFAULT_CURRENT_PATH,
+  DEFAULT_TEST_CASES_POLICY,
   DEFAULT_WORKTREE_PATH,
   normalizeBasePath,
   resolveSettings,
@@ -11,4 +12,5 @@ export {
   type ResolvedSettings,
   type SettingsPorts,
   type SettingsRequest,
+  type TestCasesPolicy,
 } from './settings.js';

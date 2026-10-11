@@ -72,3 +72,15 @@ export async function findRepositoryRoot(
   }
   return git(runner, request.cwd, ['rev-parse', '--show-toplevel']);
 }
+
+/**
+ * Rama actual del repositorio (`git branch --show-current`); `null` con HEAD
+ * desacoplado, donde git no imprime ninguna.
+ */
+export async function readCurrentBranch(
+  repoRoot: string,
+  runner: ProcessRunner = new ProcessRunner(),
+): Promise<string | null> {
+  const branch = await git(runner, repoRoot, ['branch', '--show-current']);
+  return branch === '' ? null : branch;
+}
