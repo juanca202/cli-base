@@ -5,4 +5,7 @@
  */
 export const DRY_RUN_EXEMPTIONS: Record<string, string> = {
   hello: 'comando de ejemplo sin efectos secundarios: solo imprime un saludo, no requiere --dry-run',
+  next: 'solo lectura, sin efectos secundarios',
+  find: 'solo lectura, sin efectos secundarios',
+  list: 'solo lectura, sin efectos secundarios',
 };

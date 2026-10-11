@@ -4,12 +4,12 @@ export default {
     {
       name: 'no-feature-internals',
       comment:
-        'Una feature no importa internos de otra; solo su index público. Una feature no se importa a sí misma por esta regla (pathNot).',
+        'Una feature no importa internos de otra; solo su index público (src/features/<otra>/index.ts, requisito capability-modularity). Una feature no se importa a sí misma por esta regla (pathNot).',
       severity: 'error',
       from: { path: '^src/features/([^/]+)/' },
       to: {
         path: '^src/features/[^/]+/.+',
-        pathNot: '^src/features/$1/',
+        pathNot: ['^src/features/$1/', '^src/features/[^/]+/index\\.ts$'],
       },
     },
     {

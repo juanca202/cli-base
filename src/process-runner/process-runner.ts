@@ -100,7 +100,12 @@ export class ProcessRunner {
 
       child.on('error', (err) => {
         cleanup();
-        reject(new ProcessError(`no se pudo iniciar ${command}`, { cause: err }));
+        reject(
+          new ProcessError(`no se pudo iniciar ${command}`, {
+            cause: err,
+            details: { command },
+          }),
+        );
       });
 
       child.on('close', (code) => {
@@ -111,7 +116,11 @@ export class ProcessRunner {
         }
         const exitCode = code ?? 1;
         if (exitCode !== 0) {
-          reject(new ProcessError(`${command} terminó con código ${exitCode}`));
+          reject(
+            new ProcessError(`${command} terminó con código ${exitCode}`, {
+              details: { command, exitCode },
+            }),
+          );
           return;
         }
         resolve({ stdout, stderr, exitCode });

@@ -1,17 +1,40 @@
 #!/usr/bin/env node
 import { CommanderError } from 'commander';
 import { createProgram } from './program.js';
-import { EXIT, SUCCESS, ValidationError, exitCodeFor } from './errors.js';
-import { writeDiagnostic } from './output.js';
+import { EXIT, ERROR_CODES, SUCCESS, ValidationError, exitCodeFor, type ErrorCode } from './errors.js';
+import { resolveOutputFormat, writeFailure, type CommandName } from './output.js';
 import { installProcessSignalHandlers } from './process-runner/process-signals.js';
 
 installProcessSignalHandlers();
 
+const COMMAND_NAMES: readonly string[] = ['next', 'find', 'list', 'worktree', 'relations', 'check'];
+
+const MISSING_REQUIRED_CODES: readonly string[] = [
+  'commander.missingArgument',
+  'commander.optionMissingArgument',
+  'commander.missingMandatoryOptionValue',
+];
+
+function asCommandName(name: string | null): CommandName | null {
+  return name !== null && COMMAND_NAMES.includes(name) ? (name as CommandName) : null;
+}
+
 async function main(): Promise<void> {
+  let resolvedCommand: string | null = null;
+  const program = createProgram({
+    onCommandResolved: (name) => {
+      resolvedCommand = name;
+    },
+  });
+
   try {
-    await createProgram().parseAsync(process.argv);
+    await program.parseAsync(process.argv);
     process.exitCode = SUCCESS;
   } catch (error) {
+    // Un `--output` inválido no se trata como json: queda en modo humano (solo stderr).
+    const format = resolveOutputFormat(program.opts()['output']);
+    const command = asCommandName(resolvedCommand);
+
     if (error instanceof CommanderError) {
       if (
         error.exitCode === 0 ||
@@ -21,14 +44,16 @@ async function main(): Promise<void> {
         process.exitCode = SUCCESS;
         return;
       }
-      writeDiagnostic(error.message);
+      const code: ErrorCode = MISSING_REQUIRED_CODES.includes(error.code)
+        ? ERROR_CODES.MISSING_REQUIRED_FLAG
+        : ERROR_CODES.INVALID_FLAG_VALUE;
+      writeFailure(new ValidationError(error.message, { code, cause: error }), command, format);
       process.exitCode = EXIT.INVALID_ARGUMENTS;
       return;
     }
 
-    writeDiagnostic(error instanceof Error ? error.message : String(error));
-    process.exitCode =
-      error instanceof ValidationError ? error.exitCode : exitCodeFor(error);
+    writeFailure(error, command, format);
+    process.exitCode = error instanceof ValidationError ? error.exitCode : exitCodeFor(error);
   }
 }
 
