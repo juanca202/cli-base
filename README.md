@@ -14,7 +14,7 @@ cli <comando> [argumentos] [opciones]
 ```
 
 > **Disponibilidad:** `next`, `find` y `list` están implementados como adaptadores en `src/commands/`, pero
-> todavía no están registrados en `src/program.ts` (el registro y los E2E son parte de TK-006 de US-010). Hasta
+> todavía no están registrados en `src/program.ts` (el registro es parte de TK-006 de US-010). Hasta
 > entonces solo `hello` responde desde el binario.
 
 ### Opciones globales
