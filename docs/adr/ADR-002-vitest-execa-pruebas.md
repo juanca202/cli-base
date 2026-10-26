@@ -1,12 +1,12 @@
 ---
 id: ADR-002
 status: Accepted
-last_update: 2026-09-13
+last_update: 2026-10-25
 deciders: [Equipo]
 tags: [testing, vitest, coverage, node, e2e, execa]
 supersedes: null
-superseded_by: null
-emits: [testing/CR-001, testing/CR-002, testing/CR-003, testing/CR-004, testing/CR-005, testing/CR-006, testing/CR-007]
+superseded_by: ADR-010
+emits: [testing/CR-001, testing/CR-002, testing/CR-003]
 ---
 
 # ADR-002: Vitest, cobertura V8 y Execa para pruebas unitarias y E2E
@@ -52,3 +52,4 @@ Para la suite E2E se adopta Execa para lanzar el CLI como proceso hijo real. Las
 - [@vitest/coverage-v8](https://vitest.dev/guide/coverage)
 - [Execa](https://github.com/sindresorhus/execa)
 - [Estándares de Pruebas](../standards/testing.md)
+- Parcialmente superseded por [ADR-010](ADR-010-pruebas-e2e-en-quality-tests.md) en lo relativo a la suite E2E y a Execa (criterios `testing/CR-004` a `testing/CR-007` retirados); la parte unitaria y de cobertura sigue vigente.

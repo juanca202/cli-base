@@ -18,3 +18,4 @@
 - **Gestor de paquetes / build:** npm 11.13 · `tsc` (`npm run build`, `npm run typecheck`)
 - **Desarrollo:** tsx (`npm run dev`)
 - **Calidad:** ESLint 10 + typescript-eslint · Vitest 5 (unit) · `@vitest/coverage-v8` (`npm test`, `npm run test:coverage`, `npm run lint`)
+- **Pruebas E2E:** no viven aquí; se implementan en el repositorio `quality-tests` ([ADR-010](docs/adr/ADR-010-pruebas-e2e-en-quality-tests.md))
