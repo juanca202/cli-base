@@ -3,12 +3,8 @@ import { getDescriptor } from './catalog.js';
 import type { RepositoryFileSystem } from './infra/filesystem.js';
 import type { ArtifactRef } from './inventory.js';
 import { lineAt, maskCode, readHtmlComments } from './markdown.js';
-import {
-  attachStatus,
-  parseMarkerPairs,
-  readFrontMatterStatus,
-  readStatusMarks,
-} from './status-marker.js';
+import { parseMarkerPairs } from './legacy-status-marker.js';
+import { attachStatus, readFrontMatterStatus, readStatusMarks } from './status-marker.js';
 
 const US = getDescriptor('US');
 const TC = getDescriptor('TC');

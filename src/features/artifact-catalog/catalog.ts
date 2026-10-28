@@ -47,9 +47,7 @@ export type ArtifactTypeDescriptor = {
   parentTypes: readonly ArtifactType[];
   requiresParent: boolean;
   requiresCapability: boolean;
-  /** Clave de la marca oculta de estado; `null` en `MD`, `API`, `FL` y `DG`. */
-  statusMarker: string | null;
-  /** Conjunto cerrado de valores; `null` si y solo si `statusMarker` es `null`. */
+  /** Conjunto cerrado de valores del `status` del frontmatter; `null` en `MD`, `API`, `FL` y `DG` (sin estado). */
   statusValues: readonly string[] | null;
 };
 
@@ -66,7 +64,6 @@ export const ARTIFACT_CATALOG: readonly ArtifactTypeDescriptor[] = [
     parentTypes: [],
     requiresParent: false,
     requiresCapability: false,
-    statusMarker: 'srs:status',
     statusValues: DRAFT_READY,
   },
   {
@@ -79,7 +76,6 @@ export const ARTIFACT_CATALOG: readonly ArtifactTypeDescriptor[] = [
     parentTypes: [],
     requiresParent: false,
     requiresCapability: false,
-    statusMarker: 'rq:status',
     statusValues: DRAFT_READY,
   },
   {
@@ -92,7 +88,6 @@ export const ARTIFACT_CATALOG: readonly ArtifactTypeDescriptor[] = [
     parentTypes: [],
     requiresParent: false,
     requiresCapability: false,
-    statusMarker: 'us:status',
     statusValues: DRAFT_READY,
   },
   {
@@ -105,7 +100,6 @@ export const ARTIFACT_CATALOG: readonly ArtifactTypeDescriptor[] = [
     parentTypes: ['US'],
     requiresParent: true,
     requiresCapability: false,
-    statusMarker: 'tk:status',
     statusValues: DRAFT_READY,
   },
   {
@@ -118,7 +112,6 @@ export const ARTIFACT_CATALOG: readonly ArtifactTypeDescriptor[] = [
     parentTypes: [],
     requiresParent: false,
     requiresCapability: false,
-    statusMarker: 'wi:status',
     statusValues: DRAFT_READY,
   },
   {
@@ -131,7 +124,6 @@ export const ARTIFACT_CATALOG: readonly ArtifactTypeDescriptor[] = [
     parentTypes: [],
     requiresParent: false,
     requiresCapability: false,
-    statusMarker: 'ft:status',
     statusValues: DRAFT_READY,
   },
   {
@@ -144,7 +136,6 @@ export const ARTIFACT_CATALOG: readonly ArtifactTypeDescriptor[] = [
     parentTypes: ['US', 'WI', 'FT', 'RQ'],
     requiresParent: true,
     requiresCapability: false,
-    statusMarker: 'tc:status',
     statusValues: ['Draft', 'Ready', 'Obsolete'],
   },
   {
@@ -158,7 +149,6 @@ export const ARTIFACT_CATALOG: readonly ArtifactTypeDescriptor[] = [
     parentTypes: ['SRS', 'RQ', 'US', 'WI', 'FT'],
     requiresParent: false,
     requiresCapability: false,
-    statusMarker: 'rs:status',
     statusValues: DRAFT_READY,
   },
   {
@@ -171,7 +161,6 @@ export const ARTIFACT_CATALOG: readonly ArtifactTypeDescriptor[] = [
     parentTypes: ['SRS', 'US', 'WI'],
     requiresParent: true,
     requiresCapability: false,
-    statusMarker: 'wireframe:review-status',
     statusValues: ['Proposed', 'Approved'],
   },
   {
@@ -184,7 +173,6 @@ export const ARTIFACT_CATALOG: readonly ArtifactTypeDescriptor[] = [
     parentTypes: [],
     requiresParent: false,
     requiresCapability: false,
-    statusMarker: 'status',
     statusValues: ['Draft', 'Proposed', 'Accepted', 'Deprecated', 'Superseded'],
   },
   ...(
@@ -205,7 +193,6 @@ export const ARTIFACT_CATALOG: readonly ArtifactTypeDescriptor[] = [
       parentTypes: [],
       requiresParent: false,
       requiresCapability: true,
-      statusMarker: null,
       statusValues: null,
     }),
   ),

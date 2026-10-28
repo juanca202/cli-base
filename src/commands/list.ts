@@ -16,7 +16,7 @@ export function registerListCommand(program: Command): void {
     .option('--parent <id|path>', 'restringe al subárbol de ese artefacto')
     .option('--capability <name>', 'restringe MD, API, FL y DG a una capability')
     .option('--state <state>', 'active, archived o all', 'all')
-    .option('--with-status', 'añade el estado leído de la marca oculta del documento')
+    .option('--with-status', 'añade el estado leído del status del frontmatter del documento')
     .option('--limit <n>', 'ventana: máximo de artefactos a devolver')
     .option('--offset <n>', 'ventana: artefactos a saltar')
     .action(async (type: string | undefined, opts: Record<string, unknown>, command: Command) => {

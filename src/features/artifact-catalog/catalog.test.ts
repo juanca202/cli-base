@@ -21,10 +21,9 @@ describe('catálogo de tipos', () => {
     expect(catalogOrder('DG')).toBe(13);
   });
 
-  it('statusValues es null si y solo si statusMarker es null', () => {
-    for (const descriptor of ARTIFACT_CATALOG) {
-      expect(descriptor.statusValues === null).toBe(descriptor.statusMarker === null);
-    }
+  it('solo MD, API, FL y DG no tienen estado', () => {
+    const withoutStatus = ARTIFACT_CATALOG.filter((d) => d.statusValues === null).map((d) => d.type);
+    expect(withoutStatus).toEqual(['MD', 'API', 'FL', 'DG']);
   });
 
   it('conjuntos cerrados de estados por tipo', () => {
@@ -34,10 +33,8 @@ describe('catálogo de tipos', () => {
     expect(getDescriptor('ADR').statusValues).toEqual([
       'Draft', 'Proposed', 'Accepted', 'Deprecated', 'Superseded',
     ]);
-    expect(getDescriptor('ADR').statusMarker).toBe('status');
-    expect(getDescriptor('WF').statusMarker).toBe('wireframe:review-status');
     for (const type of ['MD', 'API', 'FL', 'DG'] as const) {
-      expect(getDescriptor(type).statusMarker).toBeNull();
+      expect(getDescriptor(type).statusValues).toBeNull();
     }
   });
 
