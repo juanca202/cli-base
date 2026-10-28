@@ -92,7 +92,7 @@ Sin coincidencias devuelve `matches[0]:` con `total: 0` y sale con `0`.
 cli list --state active                  # índice de artefactos activos (nunca incluye archivados)
 cli list US --state all
 cli list TK --parent US-010
-cli list WF --parent US-021 --with-status   # añade `status` desde la marca oculta del documento
+cli list WF --parent US-021 --with-status   # añade `status` desde el frontmatter del documento
 cli list --state active --limit 20 --offset 40
 ```
 

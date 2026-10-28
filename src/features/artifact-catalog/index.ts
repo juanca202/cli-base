@@ -52,9 +52,9 @@ export { listArtifacts, type ListQuery, type ListResult } from './list.js';
 export { lineAt, maskCode, readHtmlComments, type HtmlComment } from './markdown.js';
 export {
   attachStatus,
-  parseMarkerPairs,
   readFrontMatterStatus,
   readStatusMarks,
   type StatusMark,
 } from './status-marker.js';
+export { parseMarkerPairs } from './legacy-status-marker.js';
 export { createFileSystem, type RepositoryFileSystem } from './infra/filesystem.js';
