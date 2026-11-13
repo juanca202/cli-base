@@ -6,3 +6,5 @@ coverage/
 
 # caché local de quality-check
 .sdd-devkit/quality-check-run.json
+
+.DS_Store
