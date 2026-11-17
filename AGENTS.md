@@ -1,6 +1,6 @@
 # Fuentes de contexto
 
-- @../.agents/MEMORY.md — Preferencias de la solución (repositorio de especificaciones)
+- @../AGENTS.md — Reglas generales de la solución (repositorio de especificaciones)
 - @docs/adr/README.md — Índice de decisiones arquitectónicas de este repositorio
 - @docs/standards/README.md — Índice de estándares de arquitectura de este repositorio
 - @README.md — Acerca de este repositorio
